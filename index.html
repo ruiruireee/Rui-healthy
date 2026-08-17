@@ -1950,6 +1950,11 @@ function openShareCard(){
     y2=drawWrapped(x,"共 "+cnt+" 项运动 · 累计 "+mins+" 分钟",60,y2,W-120,40,F,P.sub)+16;
     tw.forEach(w=>{y2=drawWrapped(x,"• "+w.name+"　"+w.min+" 分钟 · "+w.kcal+" kcal",60,y2,W-120,40,"400 28px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.text)+8;});
   }
+  // 关于 睿健康（简洁版 A）
+  let y3=secTitle(x,"关于 睿健康",60,y2+34,P,P.title);
+  y3=drawWrapped(x,"拍照记录饮食与运动，自动算出热量和三大营养素，再给出贴合目标的每日建议。",60,y3+8,W-120,40,"400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.sub);
+  const tags=["拍照识别","目标管理","自动营养"];let tx=60,ty=y3+22;
+  tags.forEach(t=>{x.font="500 26px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";const tw=x.measureText(t).width;const padX=22,boxW=tw+padX*2,boxH=50;x.fillStyle=P.card;rrect(x,tx,ty,boxW,boxH,25);x.fill();x.fillStyle=P.sub;x.textAlign="left";x.fillText(t,tx+padX,ty+33);tx+=boxW+14;});
   // 页脚
   x.fillStyle=P.card;rrect(x,60,H-150,W-120,90,20);x.fill();
   x.textAlign="left";x.fillStyle=P.title;x.font="800 40px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
@@ -1969,7 +1974,7 @@ async function doShare(){
   try{
     const res=await fetch(document.getElementById("shareImg").src);const blob=await res.blob();
     const file=new File([blob],"睿健康-今日成果.png",{type:"image/png"});
-    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"睿健康 · 今日成果",text:"今天我的摄入达成 & 进食建议"});}
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:"睿健康 · 今日成果",text:"今天我的摄入与运动成果"});}
     else saveShare();
   }catch(e){saveShare();}
 }
