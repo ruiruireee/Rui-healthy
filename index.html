@@ -344,106 +344,6 @@ html[data-theme="soft"] .hint{color:#9ca3af}
 html[data-theme="soft"] .hint b{color:#4b5563}
 html[data-theme="soft"] svg text{fill:#9ca3af}
 
-/* ---------- ins 风主题（一键切换） ---------- */
-html[data-theme="ins"]{
-  --bg:#fafafa; --bg2:#ffffff;
-  --card:#ffffff; --card2:#f4f5f7; --line:rgba(0,0,0,.07);
-  --txt:#262626; --sub:#8e8e8e;
-  --accent:#e1306c; --accent2:#f77737;
-  --warn:#f59e0b; --danger:#ed4956;
-  --protein:#3897f0; --carb:#fbbf24; --fat:#fb923c;
-  --ig:linear-gradient(45deg,#f09433 0%,#e6683c 22%,#dc2743 45%,#cc2366 72%,#bc1888 100%);
-  --safe-b:env(safe-area-inset-bottom,0px);
-}
-html[data-theme="ins"] body{background:#fafafa;}
-html[data-theme="ins"] .card,
-html[data-theme="ins"] .hero,
-html[data-theme="ins"] .tile,
-html[data-theme="ins"] .qa{
-  background:#ffffff;border-color:rgba(0,0,0,.07);
-  box-shadow:0 2px 14px rgba(0,0,0,.06);
-  backdrop-filter:none;-webkit-backdrop-filter:none;
-}
-html[data-theme="ins"] .body-hero{background:#ffffff;border-color:rgba(0,0,0,.07);box-shadow:0 2px 16px rgba(0,0,0,.06);}
-html[data-theme="ins"] .body-hero::before{display:none}
-html[data-theme="ins"] .body-title{color:#262626}
-html[data-theme="ins"] .body-actions{color:#8e8e8e}
-html[data-theme="ins"] .body-actions .theme-toggle:hover{opacity:.7}
-html[data-theme="ins"] .weight-bar{gap:8px}
-html[data-theme="ins"] .weight-day{background:#f4f5f7;border-radius:22px;padding:10px 2px;box-shadow:0 1px 4px rgba(0,0,0,.03)}
-html[data-theme="ins"] .weight-day.today{background:#fde8ef;border-color:#f8b4c4;box-shadow:0 4px 14px rgba(225,48,108,.14)}
-html[data-theme="ins"] .weight-day .wd-w{color:#262626;font-weight:700}
-html[data-theme="ins"] .weight-day .wd-d{color:#8e8e8e}
-html[data-theme="ins"] .weight-day .wd-a{background:#efefef;color:#8e8e8e}
-html[data-theme="ins"] .weight-day .wd-a.down{background:#e7f7ed;color:#1e7d44}
-html[data-theme="ins"] .weight-day .wd-a.up{background:#fde8ef;color:#c2185b}
-html[data-theme="ins"] .weight-day .wd-a.flat{background:#efefef;color:#8e8e8e}
-html[data-theme="ins"] .weight-main .weight-face{font-size:32px;width:58px;height:58px;border-radius:50%;background:#fde8ef;display:flex;align-items:center;justify-content:center;margin-bottom:10px;filter:none}
-html[data-theme="ins"] .weight-big{color:#262626}
-html[data-theme="ins"] .weight-big small{color:#8e8e8e}
-html[data-theme="ins"] .bmi-row{color:#8e8e8e}
-html[data-theme="ins"] .bmi-row b{color:#262626}
-html[data-theme="ins"] .status-tip{color:#8e8e8e}
-html[data-theme="ins"] .sticker{background:#f4f5f7;border-color:rgba(0,0,0,.05)}
-html[data-theme="ins"] .sticker span{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;}
-html[data-theme="ins"] .sticker[data-s="calm"] span{background:#e7f7ed}
-html[data-theme="ins"] .sticker[data-s="sleep"] span{background:#e7f0fb}
-html[data-theme="ins"] .sticker[data-s="poo"] span{background:#fde8ef}
-html[data-theme="ins"] .sticker[data-s="normal"] span{background:#fdeede}
-html[data-theme="ins"] .sticker.on{background:#ffffff;border-color:#f8b4c4;box-shadow:0 4px 12px rgba(225,48,108,.16)}
-html[data-theme="ins"] .sticker.on div{color:#c2185b;font-weight:700}
-html[data-theme="ins"] .body-metrics{gap:12px}
-html[data-theme="ins"] .body-metrics .bm-cell{background:#f4f5f7;border-color:rgba(0,0,0,.05);border-radius:18px;padding:16px 4px}
-html[data-theme="ins"] .body-metrics .bm-cell.hl{background:#fde8ef;border-color:#f8b4c4}
-html[data-theme="ins"] .body-metrics .bm-v{color:#262626}
-html[data-theme="ins"] .body-metrics .bm-l{color:#8e8e8e}
-html[data-theme="ins"] .body-metrics .bm-u{color:#8e8e8e}
-html[data-theme="ins"] .fab{background:var(--ig);box-shadow:0 8px 24px rgba(225,48,108,.3)}
-html[data-theme="ins"] .fab:active{transform:scale(.92)}
-html[data-theme="ins"] nav{background:rgba(255,255,255,.94);border-top-color:rgba(0,0,0,.07)}
-html[data-theme="ins"] nav button.on{color:#e1306c;text-shadow:none}
-html[data-theme="ins"] .btn{background:var(--ig);color:#fff;box-shadow:0 6px 18px rgba(225,48,108,.22)}
-html[data-theme="ins"] #camBtn{background:var(--ig)!important;color:#fff!important;box-shadow:0 8px 24px rgba(225,48,108,.25)!important}
-html[data-theme="ins"] .btn.sec2{background:#efefef;color:#262626;border-color:rgba(0,0,0,.07)}
-html[data-theme="ins"] input,
-html[data-theme="ins"] select{background:#ffffff;border-color:rgba(0,0,0,.10);color:#262626}
-html[data-theme="ins"] input:focus,
-html[data-theme="ins"] select:focus{border-color:#e1306c}
-html[data-theme="ins"] .bar{background:rgba(0,0,0,.06)}
-html[data-theme="ins"] .hero-ring svg circle:first-child{stroke:rgba(0,0,0,.06)}
-html[data-theme="ins"] #kg stop:first-child{stop-color:#f09433}
-html[data-theme="ins"] #kg stop:last-child{stop-color:#dc2743}
-html[data-theme="ins"] .hero-status{background:#f4f5f7;border-color:rgba(0,0,0,.07);color:#262626}
-html[data-theme="ins"] .hero-title{background:var(--ig);-webkit-background-clip:text;background-clip:text;color:transparent}
-html[data-theme="ins"] .seg button.on{background:var(--ig);color:#fff}
-html[data-theme="ins"] .advice-line.warn{background:#fde8ef;border-color:#f8b4c4;color:#c2185b}
-html[data-theme="ins"] .advice-line.ok{background:#e7f7ed;border-color:#b7e4c7;color:#1e7d44}
-html[data-theme="ins"] .cal-banner.over{background:#fde8ef;border-color:#f8b4c4;color:#c2185b}
-html[data-theme="ins"] .cal-banner.under{background:#e7f7ed;border-color:#b7e4c7;color:#1e7d44}
-html[data-theme="ins"] .toast{background:rgba(255,255,255,.96);color:#262626;border-color:rgba(0,0,0,.08);box-shadow:0 8px 24px rgba(0,0,0,.12)}
-html[data-theme="ins"] .empty{color:#8e8e8e}
-html[data-theme="ins"] .row{border-color:rgba(0,0,0,.07)}
-html[data-theme="ins"] .del{color:#ed4956}
-html[data-theme="ins"] .hint{color:#8e8e8e}
-html[data-theme="ins"] .hint b{color:#262626}
-html[data-theme="ins"] svg text{fill:#8e8e8e}
-html[data-theme="ins"] .chip{background:#f4f5f7;border-color:rgba(0,0,0,.07);color:#262626}
-html[data-theme="ins"] .food-sug{background:#fde8ef;border-color:rgba(225,48,108,.25);color:#262626}
-html[data-theme="ins"] .edit-card{border-color:#e1306c;background:rgba(225,48,108,.06)}
-html[data-theme="ins"] .verdict.ok{background:rgba(30,125,68,.10);border:1px solid rgba(30,125,68,.30)}
-html[data-theme="ins"] .verdict.bad{background:rgba(194,24,91,.10);border:1px solid rgba(194,24,91,.30)}
-html[data-theme="ins"] .badge{background:#f4f5f7;border-color:rgba(0,0,0,.06)}
-html[data-theme="ins"] .badge.on{background:rgba(225,48,108,.10);border-color:rgba(225,48,108,.35)}
-html[data-theme="ins"] .wk-stat{background:#f4f5f7;border-color:rgba(0,0,0,.06)}
-html[data-theme="ins"] .wk-stat .v{color:#e1306c}
-html[data-theme="ins"] .sheet{background:#ffffff;border-color:rgba(0,0,0,.07)}
-html[data-theme="ins"] .sheet-btn{background:#f4f5f7;border-color:rgba(0,0,0,.07);color:#262626}
-html[data-theme="ins"] .sheet-btn:active{background:var(--ig);color:#fff}
-html[data-theme="ins"] .hm-cell{background:rgba(0,0,0,.05)}
-html[data-theme="ins"] .hm-cell.ok{background:rgba(30,125,68,.5)}
-html[data-theme="ins"] .hm-cell.over{background:rgba(225,48,108,.5)}
-html[data-theme="ins"] .hm-cell.today{outline-color:#e1306c}
-
 /* 首页「页面风格」一键切换 */
 .hero-style{display:flex;align-items:center;gap:8px}
 .hs-label{font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--txt);white-space:nowrap}
@@ -464,11 +364,6 @@ html[data-theme="ins"] .hm-cell.today{outline-color:#e1306c}
 html[data-theme="soft"] .hs-label{background:#f3f4f6;border-color:rgba(0,0,0,.06);color:#4b5563}
 html[data-theme="soft"] .hs-btn{background:#fff;border-color:rgba(0,0,0,.08);color:#4b5563;box-shadow:0 1px 3px rgba(0,0,0,.05)}
 html[data-theme="soft"] .go-m{background:#f3f4f6;border-color:rgba(0,0,0,.05)}
-/* ins 主题覆盖 */
-html[data-theme="ins"] .hs-label{background:#f4f5f7;border-color:rgba(0,0,0,.07);color:#262626}
-html[data-theme="ins"] .hs-btn{background:#fff;border-color:rgba(0,0,0,.08);color:#262626;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-html[data-theme="ins"] .hs-btn:active{background:var(--ig);color:#fff;transform:scale(.9)}
-html[data-theme="ins"] .go-m{background:#f4f5f7;border-color:rgba(0,0,0,.05)}
 </style>
 </head>
 <body>
@@ -783,7 +678,6 @@ html[data-theme="ins"] .go-m{background:#f4f5f7;border-color:rgba(0,0,0,.05)}
       <div class="hint" style="margin-bottom:10px">一键切换整体视觉风格，所有功能不变。</div>
       <div class="seg" id="themeSeg">
         <button data-t="dark" onclick="setTheme('dark')">科技风</button>
-        <button data-t="ins" onclick="setTheme('ins')">ins 风</button>
         <button data-t="soft" onclick="setTheme('soft')">小清新</button>
       </div>
     </div>
@@ -1356,8 +1250,8 @@ function renderWorkoutStats(){
 }
 
 /* ---------- 主题切换 ---------- */
-const THEME_ORDER=["dark","ins","soft"];
-const THEME_ICON={dark:["🌙","当前：深色科技风"],ins:["📷","当前：ins 风"],soft:["☀️","当前：小清新"]};
+const THEME_ORDER=["dark","soft"];
+const THEME_ICON={dark:["🌙","当前：深色科技风"],soft:["☀️","当前：小清新"]};
 function curTheme(){return document.documentElement.getAttribute("data-theme")||"dark";}
 function applyTheme(t){
   const html=document.documentElement;
@@ -1367,7 +1261,8 @@ function applyTheme(t){
   save();setThemeMeta();renderBodyThemeIcon();syncThemeSeg();
 }
 function initTheme(){
-  const saved=(S.ui&&S.ui.theme)||"dark";
+  let saved=(S.ui&&S.ui.theme)||"dark";
+  if(saved==="ins")saved="soft"; /* 旧版 ins 风已下线，迁移到小清新 */
   const t=THEME_ORDER.includes(saved)?saved:"dark";
   const html=document.documentElement;
   if(t==="dark")html.removeAttribute("data-theme");
@@ -1378,7 +1273,7 @@ function toggleBodyTheme(){
   const cur=curTheme();
   const next=THEME_ORDER[(THEME_ORDER.indexOf(cur)+1)%THEME_ORDER.length];
   applyTheme(next);
-  toast("已切换到「"+(next==="dark"?"深色科技风":next==="ins"?"ins 风":"小清新")+"」");
+  toast("已切换到「"+(next==="dark"?"深色科技风":"小清新")+"」");
 }
 function setTheme(t){
   if(!THEME_ORDER.includes(t))t="dark";
@@ -1388,8 +1283,7 @@ function setThemeMeta(){
   const t=curTheme();
   const meta=document.querySelector('meta[name="theme-color"]');
   if(!meta)return;
-  if(t==="ins")meta.content="#fafafa";
-  else if(t==="soft")meta.content="#f2f4f6";
+  if(t==="soft")meta.content="#f2f4f6";
   else meta.content="#0a0e14";
 }
 function renderBodyThemeIcon(){
@@ -1889,12 +1783,6 @@ function macroBar(x,px,y,w,label,now,goal,color,P){
 }
 function shareTheme(){
   const t=curTheme();
-  if(t==="ins")return{
-    bg1:"#fafafa",bg2:"#f3f4f6",
-    glow1:"rgba(225,48,108,.16)",glow2:"rgba(255,209,0,.12)",
-    brand:["#f9ce34","#e1306c"],title:"#e1306c",text:"#262626",sub:"#8e8e8e",
-    card:"rgba(0,0,0,.05)",barBg:"rgba(0,0,0,.07)",line:"rgba(0,0,0,.10)"
-  };
   if(t==="soft")return{
     bg1:"#f2f4f6",bg2:"#eef1f4",
     glow1:"rgba(52,211,153,.16)",glow2:"rgba(34,211,238,.12)",
