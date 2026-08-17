@@ -443,6 +443,32 @@ html[data-theme="ins"] .hm-cell{background:rgba(0,0,0,.05)}
 html[data-theme="ins"] .hm-cell.ok{background:rgba(30,125,68,.5)}
 html[data-theme="ins"] .hm-cell.over{background:rgba(225,48,108,.5)}
 html[data-theme="ins"] .hm-cell.today{outline-color:#e1306c}
+
+/* 首页「页面风格」一键切换 */
+.hero-style{display:flex;align-items:center;gap:8px}
+.hs-label{font-size:12px;font-weight:700;padding:6px 12px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid var(--line);color:var(--txt);white-space:nowrap}
+.hs-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.1);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;color:var(--txt);transition:transform .12s,background .15s}
+.hs-btn:active{transform:scale(.9)}
+.hs-btn:hover{background:rgba(255,255,255,.16)}
+/* 目标概览 */
+.go-date{text-align:center;font-size:13px;color:var(--sub);margin-bottom:8px}
+.go-weight{text-align:center;margin-bottom:16px;display:flex;align-items:baseline;justify-content:center;gap:6px}
+.go-w-num{font-size:42px;font-weight:800;color:var(--accent);line-height:1}
+.go-w-unit{font-size:14px;color:var(--sub)}
+.go-macros{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;text-align:center}
+.go-m{background:rgba(255,255,255,.05);border-radius:14px;padding:14px 4px;border:1px solid var(--line)}
+.go-m-v{font-size:21px;font-weight:800;color:var(--txt)}
+.go-m-l{font-size:11px;color:var(--sub);margin-top:5px}
+
+/* 小清新主题覆盖 */
+html[data-theme="soft"] .hs-label{background:#f3f4f6;border-color:rgba(0,0,0,.06);color:#4b5563}
+html[data-theme="soft"] .hs-btn{background:#fff;border-color:rgba(0,0,0,.08);color:#4b5563;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+html[data-theme="soft"] .go-m{background:#f3f4f6;border-color:rgba(0,0,0,.05)}
+/* ins 主题覆盖 */
+html[data-theme="ins"] .hs-label{background:#f4f5f7;border-color:rgba(0,0,0,.07);color:#262626}
+html[data-theme="ins"] .hs-btn{background:#fff;border-color:rgba(0,0,0,.08);color:#262626;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+html[data-theme="ins"] .hs-btn:active{background:var(--ig);color:#fff;transform:scale(.9)}
+html[data-theme="ins"] .go-m{background:#f4f5f7;border-color:rgba(0,0,0,.05)}
 </style>
 </head>
 <body>
@@ -471,7 +497,10 @@ html[data-theme="ins"] .hm-cell.today{outline-color:#e1306c}
           <div class="hero-title">睿健康</div>
           <div class="hero-date" id="todayLabel"></div>
         </div>
-        <div class="hero-status">💪 健康打卡</div>
+        <div class="hero-style">
+          <span class="hs-label">页面风格</span>
+          <button class="hs-btn theme-toggle" onclick="toggleBodyTheme()" title="一键切换风格">🌙</button>
+        </div>
       </div>
       <div class="hero-ring">
         <svg viewBox="0 0 160 160" width="172" height="172">
@@ -661,7 +690,6 @@ html[data-theme="ins"] .hm-cell.today{outline-color:#e1306c}
       <div class="body-head">
         <div class="body-title">Today <span class="body-arrow">▼</span></div>
         <div class="body-actions">
-          <span class="theme-toggle" onclick="toggleBodyTheme()" title="切换风格">🌙</span>
           <span>☰</span>
         </div>
       </div>
@@ -742,6 +770,18 @@ html[data-theme="ins"] .hm-cell.today{outline-color:#e1306c}
       <div class="hint" style="margin-top:12px">当前体重约 <b id="curJin">—</b> 斤（取自身体数据）。填好上面两项，自动算出每天该吃多少、赤字多大。</div>
       <div id="goalOut" style="margin-top:10px"></div>
       <button class="btn" style="margin-top:14px" onclick="applyGoal()">应用为每日热量目标</button>
+    </div>
+
+    <div class="card">
+      <h2>目标概览</h2>
+      <div class="go-date" id="goDate">目标日期：—</div>
+      <div class="go-weight"><span class="go-w-num" id="goWeight">—</span><span class="go-w-unit">斤</span></div>
+      <div class="go-macros">
+        <div class="go-m"><div class="go-m-v" id="goPro">—</div><div class="go-m-l">蛋白质(g)</div></div>
+        <div class="go-m"><div class="go-m-v" id="goCarb">—</div><div class="go-m-l">碳水(g)</div></div>
+        <div class="go-m"><div class="go-m-v" id="goFat">—</div><div class="go-m-l">脂肪(g)</div></div>
+      </div>
+      <div class="hint" style="margin-top:12px;text-align:center">填好目标并「应用为每日热量目标」后，蛋白质/碳水/脂肪会自动生成。</div>
     </div>
   </section>
 
@@ -1489,6 +1529,16 @@ function renderGoal(){
   document.getElementById("gGoalWeight").value=S.goals.goalWeightJin||"";
   updateDateDisplay();
   goalCalc();
+  renderGoalOverview();
+}
+function renderGoalOverview(){
+  const g=S.goals||{};
+  const dEl=document.getElementById("goDate");
+  if(dEl){if(g.goalDate){const d=new Date(g.goalDate+"T00:00:00");dEl.textContent="目标日期："+d.toLocaleDateString("zh-CN",{year:"numeric",month:"long",day:"numeric"});}else dEl.textContent="目标日期：—";}
+  const wEl=document.getElementById("goWeight");if(wEl)wEl.textContent=g.goalWeightJin?g.goalWeightJin:"—";
+  const pEl=document.getElementById("goPro");if(pEl)pEl.textContent=g.pro?g.pro:"—";
+  const cEl=document.getElementById("goCarb");if(cEl)cEl.textContent=g.carb?g.carb:"—";
+  const fEl=document.getElementById("goFat");if(fEl)fEl.textContent=g.fat?g.fat:"—";
 }
 function updateDateDisplay(){
   const sp=document.getElementById("dateDisplay");const inp=document.getElementById("gGoalDate");
@@ -1604,7 +1654,7 @@ function applyGoal(){
   const m=distributeMacros(intake);
   S.goals.goalDate=dateV; S.goals.goalWeightJin=tJin;
   S.goals.kcal=intake; S.goals.pro=m.pro; S.goals.carb=m.carb; S.goals.fat=m.fat;
-  save();renderToday();toast("已设为每日 "+intake+" kcal（蛋白"+m.pro+"g·碳水"+m.carb+"g·脂肪"+m.fat+"g）");
+  save();renderToday();renderGoal();toast("已设为每日 "+intake+" kcal（蛋白"+m.pro+"g·碳水"+m.carb+"g·脂肪"+m.fat+"g）");
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));}
 
