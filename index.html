@@ -195,7 +195,10 @@
   .hm-d{font-size:10px;color:var(--sub);opacity:.85}
   .hm-k{font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
   .hm-b{font-size:9px;color:#fff;opacity:.92;text-shadow:0 1px 2px rgba(0,0,0,.35)}
-  .hm-cell.empty .hm-d{opacity:.45}
+  .hm-cell.empty{background:rgba(255,255,255,.06)}
+  .hm-cell.empty .hm-d{opacity:.65}
+  .hm-cell.future{background:transparent;opacity:.45}
+  .hm-cell.future .hm-d{opacity:.4}
   .hm-note{margin-top:8px;font-size:11px;color:var(--sub);text-align:center;line-height:1.4}
   /* 运动激励 */
   .wk-hero{display:flex;align-items:center;gap:14px;padding:2px}
@@ -375,7 +378,8 @@ html[data-theme="soft"] .hs-btn{background:#fff;border-color:rgba(0,0,0,.08);col
 html[data-theme="soft"] .go-m{background:#f3f4f6;border-color:rgba(0,0,0,.05)}
 html[data-theme="soft"] .hm-d{color:#64748b}
 html[data-theme="soft"] .hm-k,html[data-theme="soft"] .hm-b{color:#0a0e14;text-shadow:none}
-html[data-theme="soft"] .hm-cell.empty .hm-d{opacity:.5}
+html[data-theme="soft"] .hm-cell.empty .hm-d{opacity:.7}
+html[data-theme="soft"] .hm-cell.future .hm-d{opacity:.4}
 </style>
 </head>
 <body>
@@ -922,9 +926,11 @@ function renderHeatmap(){
   const grid=document.getElementById("hmGrid"); if(!grid)return;
   const goal=S.goals.kcal||2000;
   const todayObj=new Date();
-  const start=new Date(todayObj); start.setDate(start.getDate()-34);
-  const dow=(start.getDay()+6)%7;            // 0=周一
-  start.setDate(start.getDate()-dow);        // 对齐到周一
+  // 5周窗口：包含「今天所在周」。先求今天的 Monday，再往前退4周。
+  todayObj.setHours(0,0,0,0);
+  const todayDow=(todayObj.getDay()+6)%7;     // 0=Mon
+  const start=new Date(todayObj);
+  start.setDate(start.getDate()-todayDow-28); // 4周前的本周一 = 5周窗口起始
   const cells=[]; const cur=new Date(start);
   for(let i=0;i<35;i++){
     const ds=fmtDate(cur);
@@ -935,12 +941,13 @@ function renderHeatmap(){
     const has=items.length>0||wk.length>0;
     let cls=items.length>0?(k>goal?"over":"ok"):"empty";
     const isToday=ds===today();
+    const isFuture=cur.getTime()>todayObj.getTime();
     const day=cur.getDate();
     let inner='<span class="hm-d">'+day+'</span>';
     if(k>0)inner+='<span class="hm-k">'+k+'</span>';
     if(burn>0)inner+='<span class="hm-b">'+burn+'</span>';
-    const tip=(has?("摄入 "+k+" · 运动 "+burn+" kcal"):"无记录")+" ("+ds+")";
-    cells.push('<div class="hm-cell '+cls+(isToday?" today":"")+'" title="'+tip+'">'+inner+'</div>');
+    const tip=(has?("摄入 "+k+" · 运动 "+burn+" kcal"):(isFuture?"未来":"无记录"))+" ("+ds+")";
+    cells.push('<div class="hm-cell '+cls+(isToday?" today":"")+(isFuture?" future":"")+'" title="'+tip+'">'+inner+'</div>');
     cur.setDate(cur.getDate()+1);
   }
   grid.innerHTML=cells.join("");
