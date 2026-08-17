@@ -573,29 +573,7 @@ html[data-theme="ins"] .go-m{background:#f4f5f7;border-color:rgba(0,0,0,.05)}
       <div class="tile"><div class="tile-v" id="ovNet">0<small>kcal</small></div><div class="tile-l" id="ovNetLbl">净热量</div></div>
     </div>
 
-    <!-- 快捷操作 -->
-    <div class="card">
-      <h2>快捷操作</h2>
-      <div class="qa-grid">
-        <div class="qa" onclick="go('diet')"><span class="qa-ic">🍱</span>吃了啥</div>
-        <div class="qa" onclick="go('workout')"><span class="qa-ic">🏋️</span>练了啥</div>
-        <div class="qa" onclick="go('body')"><span class="qa-ic">⚖️</span>身体数据</div>
-        <div class="qa" onclick="go('more')"><span class="qa-ic">⚙️</span>设置</div>
-      </div>
-    </div>
-
-    <!-- 本月达标日历 -->
-    <div class="card">
-      <div class="hm-head"><h2>本月达标日历</h2>
-        <span class="hm-legend">
-          <span><i style="background:rgba(52,211,153,.55)"></i>达标</span>
-          <span><i style="background:rgba(251,113,133,.55)"></i>超标</span>
-          <span><i style="background:rgba(255,255,255,.06)"></i>未记录</span>
-        </span>
-      </div>
-      <div class="hm-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
-      <div class="hm-grid" id="hmGrid"></div>
-    </div>
+    <!-- 本月达标日历（已移至目标页） -->
   </section>
 
   <!-- 吃了啥 -->
@@ -783,6 +761,19 @@ html[data-theme="ins"] .go-m{background:#f4f5f7;border-color:rgba(0,0,0,.05)}
       </div>
       <div class="hint" style="margin-top:12px;text-align:center">填好目标并「应用为每日热量目标」后，蛋白质/碳水/脂肪会自动生成。</div>
     </div>
+
+    <!-- 本月达标日历 -->
+    <div class="card">
+      <div class="hm-head"><h2>本月达标日历</h2>
+        <span class="hm-legend">
+          <span><i style="background:rgba(52,211,153,.55)"></i>达标</span>
+          <span><i style="background:rgba(251,113,133,.55)"></i>超标</span>
+          <span><i style="background:rgba(255,255,255,.06)"></i>未记录</span>
+        </span>
+      </div>
+      <div class="hm-weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="hm-grid" id="hmGrid"></div>
+    </div>
   </section>
 
   <!-- 更多 -->
@@ -960,10 +951,17 @@ function renderToday(){
     document.getElementById("calBText").textContent="已达标，稳住";
     document.getElementById("calBSub").textContent="刚好达到目标 "+calGoal+" kcal";
   }else{
-    banner.className="cal-banner under";
-    document.getElementById("calBEmoji").textContent="🟢";
-    document.getElementById("calBText").textContent="还能吃，营养要够";
-    document.getElementById("calBSub").textContent="还能吃 "+(-diff)+" kcal · 目标 "+calGoal+" kcal";
+    if(new Date().getHours()>=21){
+      banner.className="cal-banner under";
+      document.getElementById("calBEmoji").textContent="🌙";
+      document.getElementById("calBText").textContent="时间到了，不要进食了";
+      document.getElementById("calBSub").textContent="今晚别再进食啦 · 目标 "+calGoal+" kcal";
+    }else{
+      banner.className="cal-banner under";
+      document.getElementById("calBEmoji").textContent="🟢";
+      document.getElementById("calBText").textContent="还能吃，营养要够";
+      document.getElementById("calBSub").textContent="还能吃 "+(-diff)+" kcal · 目标 "+calGoal+" kcal";
+    }
   }
   // 营养目标达成（蛋白 / 碳水 缺口）
   const proGoal=S.goals.pro||0, carbGoal=S.goals.carb||0;
@@ -1043,17 +1041,18 @@ function renderAdvice(){
   const f=items.reduce((a,b)=>a+(+b.f||0),0);
   const proGoal=S.goals.pro||0, carbGoal=S.goals.carb||0, fatGoal=S.goals.fat||deriveFat();
   if(!items.length){
-    box.innerHTML='<div class="hint">今天还没记录饮食，先去拍照或加常用食物，下午5点后再来看建议～</div>';
+    box.innerHTML='<div class="hint">今天还没记录饮食，先去拍照或加常用食物吧～</div>';
     return;
   }
   if(!proGoal && !carbGoal && !fatGoal){
     box.innerHTML='<div class="hint">先在「更多」设好蛋白 / 碳水 / 脂肪目标，才能给出精准建议。</div>';
     return;
   }
+  const night=new Date().getHours()>=21;
   const macros=[
-    {name:"蛋白质",now:p,goal:proGoal,foods:"鸡胸肉 / 鸡蛋 / 牛奶 / 希腊酸奶 / 蛋白粉"},
-    {name:"碳水",now:c,goal:carbGoal,foods:"燕麦 / 米饭 / 香蕉 / 全麦面包 / 红薯"},
-    {name:"脂肪",now:f,goal:fatGoal,foods:"牛油果 / 坚果 / 橄榄油"}
+    {key:"pro",name:"蛋白质",now:p,goal:proGoal},
+    {key:"carb",name:"碳水",now:c,goal:carbGoal},
+    {key:"fat",name:"脂肪",now:f,goal:fatGoal}
   ];
   const over=[], under=[];
   macros.forEach(m=>{
@@ -1068,18 +1067,27 @@ function renderAdvice(){
     const ex=Math.round(m.now-m.goal);
     html+='<div class="advice-line warn"><b>'+m.name+'已超标 '+ex+'g</b>：今晚别再吃高脂 / 高'+m.name+'的食物。</div>';
   });
-  if(under.length){
-    const parts=under.map(u=>u.m.name+' <b>'+Math.round(u.left)+'g</b>').join('、');
-    html+='<div class="advice-line ok">今晚还可补充：'+parts+'。</div>';
-    under.sort((a,b)=>b.left-a.left);
-    const top=under[0];
-    const key=top.m.name==="蛋白质"?"pro":top.m.name==="碳水"?"carb":"fat";
-    const sugs=suggestFoods(key,top.left);
-    html+='<div class="advice-line">👉 还差 <b>'+top.m.name+' '+Math.round(top.left)+'g</b>，今晚可吃：</div>';
+  // 晚上9点后：不再建议进食
+  if(night){
+    if(under.length)html+='<div class="advice-line">⏰ 时间到了，不要进食了。今天还差的部分明天再补，早点休息～</div>';
+    else html+='<div class="advice-line ok">三大营养素都在目标内，时间也不早了，早点休息吧 🌙</div>';
+    box.innerHTML=html; return;
+  }
+  // 优先把蛋白质吃满（详细食物建议）
+  const proU=under.find(u=>u.m.key==="pro");
+  if(proU){
+    html+='<div class="advice-line ok">🥩 优先把<b>蛋白质</b>吃满，还差 <b>'+Math.round(proU.left)+'g</b>：</div>';
+    const sugs=suggestFoods("pro",proU.left);
     sugs.forEach(s=>{
-      html+='<div class="food-sug">'+s.emoji+' '+s.n+' '+fmtQty(s.s,s.u)+' ≈'+s.got+'g'+top.m.name+' · '+s.kcal+'kcal</div>';
+      html+='<div class="food-sug">'+s.emoji+' '+s.n+' '+fmtQty(s.s,s.u)+' ≈'+s.got+'g蛋白质 · '+s.kcal+'kcal</div>';
     });
   }
+  // 碳水：一句话带过
+  const carbU=under.find(u=>u.m.key==="carb");
+  if(carbU)html+='<div class="advice-line">🍚 碳水还差 <b>'+Math.round(carbU.left)+'g</b>，主食随便补点（燕麦 / 米饭 / 红薯）就行。</div>';
+  // 脂肪：一句话带过
+  const fatU=under.find(u=>u.m.key==="fat");
+  if(fatU)html+='<div class="advice-line">🥑 脂肪还差 <b>'+Math.round(fatU.left)+'g</b>，来点坚果 / 牛油果即可。</div>';
   if(!over.length && !under.length){
     html='<div class="advice-line ok">三大营养素都在目标内，保持节奏即可 👍</div>';
   }
@@ -1530,6 +1538,7 @@ function renderGoal(){
   updateDateDisplay();
   goalCalc();
   renderGoalOverview();
+  renderHeatmap();
 }
 function renderGoalOverview(){
   const g=S.goals||{};
