@@ -1845,9 +1845,9 @@ function toggleKey(){
 
 /* ---------- 分享今日成果图 ---------- */
 function rrect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
-function drawBrand(x,cx,cy){
+function drawBrand(x,cx,cy,P){
   x.save();const g=x.createLinearGradient(cx,cy,cx+70,cy+40);
-  g.addColorStop(0,"#22d3ee");g.addColorStop(1,"#34d399");
+  g.addColorStop(0,P.brand[0]);g.addColorStop(1,P.brand[1]);
   x.strokeStyle=g;x.lineWidth=10;x.lineCap="round";
   x.beginPath();x.moveTo(cx+20,cy+22);x.lineTo(cx+50,cy+22);x.stroke();
   x.beginPath();x.moveTo(cx+8,cy+10);x.lineTo(cx+8,cy+34);x.stroke();
@@ -1856,92 +1856,107 @@ function drawBrand(x,cx,cy){
   x.beginPath();x.moveTo(cx+50,cy+14);x.lineTo(cx+50,cy+30);x.stroke();
   x.restore();
 }
-function secTitle(x,t,px,y,color){
-  x.fillStyle=color||"#22d3ee";rrect(x,px,y-26,7,30,3);x.fill();
-  x.textAlign="left";x.fillStyle="#eaf2ff";x.font="800 38px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+function secTitle(x,t,px,y,P,barColor){
+  x.fillStyle=barColor||P.title;rrect(x,px,y-26,7,30,3);x.fill();
+  x.textAlign="left";x.fillStyle=P.text;x.font="800 38px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText(t,px+20,y);return y+34;
 }
-function divider(x,x1,y,x2){x.strokeStyle="rgba(255,255,255,.10)";x.lineWidth=2;x.beginPath();x.moveTo(x1,y);x.lineTo(x2,y);x.stroke();}
+function divider(x,x1,y,x2,P){x.strokeStyle=P.line;x.lineWidth=2;x.beginPath();x.moveTo(x1,y);x.lineTo(x2,y);x.stroke();}
 function drawWrapped(x,text,px,y,w,lineH,font,color){
   x.font=font;x.fillStyle=color;x.textAlign="left";
   const chars=[...text];let line="",yy=y;
   for(const ch of chars){const test=line+ch;if(x.measureText(test).width>w&&line){x.fillText(line,px,yy);line=ch;yy+=lineH;}else line=test;}
   if(line)x.fillText(line,px,yy);return yy+lineH;
 }
-function macroBar(x,px,y,w,label,now,goal,color){
-  x.textAlign="left";x.fillStyle="#cdd9ec";x.font="600 32px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+function macroBar(x,px,y,w,label,now,goal,color,P){
+  x.textAlign="left";x.fillStyle=P.sub;x.font="600 32px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText(label,px,y);
   const left=goal-now;
   const state=goal>0?(left>=0?("还差 "+Math.round(left)+"g"):("已超 "+Math.round(-left)+"g")):"未设目标";
-  x.textAlign="right";x.fillStyle="#eaf2ff";x.font="700 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.textAlign="right";x.fillStyle=P.text;x.font="700 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText(Math.round(now)+" / "+(goal||0)+" g · "+state,px+w,y);
-  const by=y+16;x.fillStyle="rgba(255,255,255,.08)";rrect(x,px,by,w,18,9);x.fill();
+  const by=y+16;x.fillStyle=P.barBg;rrect(x,px,by,w,18,9);x.fill();
   if(goal>0){const fw=w*Math.min(1,now/goal);if(fw>0){x.fillStyle=color;rrect(x,px,by,fw,18,9);x.fill();}}
 }
-function drawAdvice(x,px,y,w,items,p,c,f,proGoal,carbGoal,fatGoal){
-  x.textAlign="left";const F="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-  if(!items.length){return drawWrapped(x,"今天还没记录饮食，先去拍照或加常用食物吧～",px,y,w,42,F,"#cdd9ec")+12;}
-  if(!proGoal&&!carbGoal&&!fatGoal){return drawWrapped(x,"先在「更多」设好蛋白 / 碳水 / 脂肪目标，才能给出精准建议。",px,y,w,42,F,"#cdd9ec")+12;}
-  const macros=[{n:"蛋白质",now:p,goal:proGoal},{n:"碳水",now:c,goal:carbGoal},{n:"脂肪",now:f,goal:fatGoal}];
-  const over=[],under=[];
-  macros.forEach(m=>{if(m.goal>0){const left=m.goal-m.now;if(left<=-0.5)over.push(m);else if(left>=0.5)under.push({m,left});}});
-  over.forEach(m=>{const ex=Math.round(m.now-m.goal);y=drawWrapped(x,"🔴 "+m.n+"已超标 "+ex+"g：今晚别再吃高脂 / 高"+m.n+"的食物。",px,y,w,42,F,"#fecdd3")+10;});
-  if(under.length){
-    const parts=under.map(u=>u.m.n+" "+Math.round(u.left)+"g").join("、");
-    y=drawWrapped(x,"🟢 今晚还可补充："+parts+"。",px,y,w,42,F,"#bbf7d0")+10;
-    under.sort((a,b)=>b.left-a.left);const top=under[0];
-    const key=top.m.n==="蛋白质"?"pro":top.m.n==="碳水"?"carb":"fat";
-    const sugs=suggestFoods(key,top.left);
-    y=drawWrapped(x,"👉 还差 "+top.m.n+" "+Math.round(top.left)+"g，今晚可吃：",px,y,w,42,F,"#eaf2ff")+6;
-    sugs.forEach(s=>{y=drawWrapped(x,"   "+s.emoji+" "+s.n+" "+fmtQty(s.s,s.u)+" ≈"+s.got+"g"+top.m.n+" · "+s.kcal+"kcal",px,y,w,42,"400 28px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif","#cdd9ec")+4;});
-  }
-  if(!over.length&&!under.length){y=drawWrapped(x,"✅ 三大营养素都在目标内，保持节奏即可 👍",px,y,w,42,F,"#bbf7d0")+12;}
-  return y+10;
+function shareTheme(){
+  const t=curTheme();
+  if(t==="ins")return{
+    bg1:"#fafafa",bg2:"#f3f4f6",
+    glow1:"rgba(225,48,108,.16)",glow2:"rgba(255,209,0,.12)",
+    brand:["#f9ce34","#e1306c"],title:"#e1306c",text:"#262626",sub:"#8e8e8e",
+    card:"rgba(0,0,0,.05)",barBg:"rgba(0,0,0,.07)",line:"rgba(0,0,0,.10)"
+  };
+  if(t==="soft")return{
+    bg1:"#f2f4f6",bg2:"#eef1f4",
+    glow1:"rgba(52,211,153,.16)",glow2:"rgba(34,211,238,.12)",
+    brand:["#22d3ee","#34d399"],title:"#0ea5a4",text:"#374151",sub:"#6b7280",
+    card:"rgba(0,0,0,.04)",barBg:"rgba(0,0,0,.06)",line:"rgba(0,0,0,.10)"
+  };
+  return{
+    bg1:"#0a0e14",bg2:"#0b1018",
+    glow1:"rgba(34,211,238,.16)",glow2:"rgba(52,211,153,.14)",
+    brand:["#22d3ee","#34d399"],title:"#22d3ee",text:"#eaf2ff",sub:"#8fa3bf",
+    card:"rgba(255,255,255,.05)",barBg:"rgba(255,255,255,.08)",line:"rgba(255,255,255,.10)"
+  };
 }
 function openShareCard(){
   const W=1080,H=1640;
   const cv=document.createElement("canvas");cv.width=W;cv.height=H;
   const x=cv.getContext("2d");
-  const bg=x.createLinearGradient(0,0,W,H);bg.addColorStop(0,"#0a0e14");bg.addColorStop(1,"#0b1018");
+  const P=shareTheme();
+  const bg=x.createLinearGradient(0,0,W,H);bg.addColorStop(0,P.bg1);bg.addColorStop(1,P.bg2);
   x.fillStyle=bg;x.fillRect(0,0,W,H);
-  let rg=x.createRadialGradient(W*0.92,70,0,W*0.92,70,520);rg.addColorStop(0,"rgba(34,211,238,.16)");rg.addColorStop(1,"rgba(34,211,238,0)");
+  let rg=x.createRadialGradient(W*0.92,70,0,W*0.92,70,520);rg.addColorStop(0,P.glow1);rg.addColorStop(1,"rgba(0,0,0,0)");
   x.fillStyle=rg;x.fillRect(0,0,W,H);
-  let rg2=x.createRadialGradient(0,H*0.18,0,0,H*0.18,520);rg2.addColorStop(0,"rgba(52,211,153,.14)");rg2.addColorStop(1,"rgba(52,211,153,0)");
+  let rg2=x.createRadialGradient(0,H*0.18,0,0,H*0.18,520);rg2.addColorStop(0,P.glow2);rg2.addColorStop(1,"rgba(0,0,0,0)");
   x.fillStyle=rg2;x.fillRect(0,0,W,H);
-  drawBrand(x,60,72);
+  drawBrand(x,60,72,P);
   x.textAlign="left";x.textBaseline="alphabetic";
-  x.fillStyle="#eaf2ff";x.font="800 56px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.fillStyle=P.text;x.font="800 56px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText("睿健康",158,112);
-  x.fillStyle="#8fa3bf";x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.fillStyle=P.sub;x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText("按照自己的节奏来",158,154);
   const d=new Date();const dateStr=d.toLocaleDateString("zh-CN",{month:"long",day:"numeric",weekday:"short"});
-  x.textAlign="right";x.fillStyle="#8fa3bf";x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.textAlign="right";x.fillStyle=P.sub;x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText(dateStr,W-60,112);
-  x.textAlign="left";divider(x,60,192,W-60);
+  x.textAlign="left";divider(x,60,192,W-60,P);
   const items=S.diet.filter(t=>t.date===today());
   const k=items.reduce((a,b)=>a+b.k,0),p=items.reduce((a,b)=>a+b.p,0),c=items.reduce((a,b)=>a+b.c,0),f=items.reduce((a,b)=>a+b.f,0);
   const proGoal=S.goals.pro||0,carbGoal=S.goals.carb||0,fatGoal=S.goals.fat||deriveFat();
   const goalK=S.goals.kcal||2000;
-  let y=secTitle(x,"今日摄入达成",60,250,"#22d3ee");
-  x.font="800 96px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.fillStyle="#eaf2ff";x.textAlign="left";
+  secTitle(x,"今日摄入达成",60,250,P,P.title);
+  x.font="800 96px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.fillStyle=P.text;x.textAlign="left";
   const kw=x.measureText(k+"").width;x.fillText(k+"",60,375);
-  x.font="400 34px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.fillStyle="#8fa3bf";
+  x.font="400 34px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.fillStyle=P.sub;
   x.fillText("/ "+goalK+" kcal  热量摄入",60+kw+26,375);
-  macroBar(x,60,430,W-120,"蛋白质",p,proGoal,"#60a5fa");
-  macroBar(x,60,510,W-120,"碳水",c,carbGoal,"#fbbf24");
-  macroBar(x,60,590,W-120,"脂肪",f,fatGoal,"#fb923c");
-  y=secTitle(x,"💡 今日进食建议",60,690,"#34d399");
-  y=drawAdvice(x,60,y+6,W-120,items,p,c,f,proGoal,carbGoal,fatGoal);
-  y=secTitle(x,"关于 睿健康",60,y+14,"#22d3ee");
-  y=drawWrapped(x,"睿健康 是一款主打「轻松坚持」的健身与饮食管理 App：用手机记录每日吃了什么、练了什么，自动算出热量与三大营养素，并给出贴合目标的进食建议。",60,y,W-120,44,"400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif","#cdd9ec")+20;
-  const feats=["📷 一键拍照识别食物，自动估算热量与营养","🏷️ 拍摄包装营养成分表，自动换算卡路里并记录","🎯 设定减重目标日期，推荐每日热量缺口","💡 下午打开即看今日摄入达成与进食建议"];
-  feats.forEach(t=>{y=drawWrapped(x,t,60,y,W-120,44,"400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif","#cdd9ec")+6;});
-  x.fillStyle="rgba(255,255,255,.05)";rrect(x,60,H-150,W-120,90,20);x.fill();
-  x.textAlign="left";x.fillStyle="#22d3ee";x.font="800 40px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  macroBar(x,60,430,W-120,"蛋白质",p,proGoal,"#60a5fa",P);
+  macroBar(x,60,510,W-120,"碳水",c,carbGoal,"#fbbf24",P);
+  macroBar(x,60,590,W-120,"脂肪",f,fatGoal,"#fb923c",P);
+  // 今日运动数据
+  const tw=S.workouts.filter(w=>w.date===today());
+  const burn=tw.reduce((a,b)=>a+(b.kcal||0),0);
+  const mins=tw.reduce((a,b)=>a+(b.min||0),0);
+  const cnt=tw.length;
+  let y2=secTitle(x,"🏋️ 今日运动数据",60,700,P,P.title);
+  const F="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  if(cnt===0){
+    y2=drawWrapped(x,"今天还没练，选个运动开始吧～",60,y2+10,W-120,42,F,P.sub)+12;
+  }else{
+    x.font="800 92px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.fillStyle=P.text;x.textAlign="left";
+    const bw=x.measureText(burn+"").width;x.fillText(burn+"",60,y2+95);
+    x.font="400 32px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.fillStyle=P.sub;
+    x.fillText("今日运动消耗 (kcal)",60+bw+24,y2+95);
+    y2=y2+130;
+    y2=drawWrapped(x,"共 "+cnt+" 项运动 · 累计 "+mins+" 分钟",60,y2,W-120,40,F,P.sub)+16;
+    tw.forEach(w=>{y2=drawWrapped(x,"• "+w.name+"　"+w.min+" 分钟 · "+w.kcal+" kcal",60,y2,W-120,40,"400 28px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.text)+8;});
+  }
+  // 页脚
+  x.fillStyle=P.card;rrect(x,60,H-150,W-120,90,20);x.fill();
+  x.textAlign="left";x.fillStyle=P.title;x.font="800 40px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText("睿健康",92,H-92);
-  x.fillStyle="#8fa3bf";x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.fillStyle=P.sub;x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText("按照自己的节奏来",270,H-90);
-  x.textAlign="right";x.fillStyle="#8fa3bf";x.font="400 26px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.textAlign="right";x.fillStyle=P.sub;x.font="400 26px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
   x.fillText("健康打卡 · 今天也要好好吃饭",W-92,H-90);
   document.getElementById("shareImg").src=cv.toDataURL("image/png");
   document.getElementById("shareModal").classList.add("show");
