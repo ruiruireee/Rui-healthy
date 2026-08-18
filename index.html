@@ -934,22 +934,22 @@ function renderToday(){
       document.getElementById("calBSub").textContent="还能吃 "+(-diff)+" kcal · 目标 "+calGoal+" kcal";
     }
   }
-  // 营养目标达成（蛋白 / 碳水 缺口）
+  // 营养目标达成（蛋白 / 碳水 / 脂肪，统一 Math.round 避免浮点尾数）
   const proGoal=S.goals.pro||0, carbGoal=S.goals.carb||0;
-  document.getElementById("proNow").textContent=p;
-  document.getElementById("proGoal").textContent=proGoal;
-  document.getElementById("proGap").textContent=Math.max(0,proGoal-p);
+  document.getElementById("proNow").textContent=Math.round(p);
+  document.getElementById("proGoal").textContent=Math.round(proGoal);
+  document.getElementById("proGap").textContent=Math.round(Math.max(0,proGoal-p));
   document.getElementById("proBar").style.width=Math.min(100,Math.round(p/(proGoal||1)*100))+"%";
-  document.getElementById("carbNow").textContent=c;
-  document.getElementById("carbGoal").textContent=carbGoal;
-  document.getElementById("carbGap").textContent=Math.max(0,carbGoal-c);
+  document.getElementById("carbNow").textContent=Math.round(c);
+  document.getElementById("carbGoal").textContent=Math.round(carbGoal);
+  document.getElementById("carbGap").textContent=Math.round(Math.max(0,carbGoal-c));
   document.getElementById("carbBar").style.width=Math.min(100,Math.round(c/(carbGoal||1)*100))+"%";
-  document.getElementById("fatNow2").textContent=f;
+  document.getElementById("fatNow2").textContent=Math.round(f);
   const fatGoal=S.goals.fat||deriveFat();
-  document.getElementById("fatGoal").textContent=fatGoal;
+  document.getElementById("fatGoal").textContent=Math.round(fatGoal);
   document.getElementById("fatBar").style.width=Math.min(100,Math.round(f/(fatGoal||1)*100))+"%";
   const fatState=document.getElementById("fatState");
-  if(fatGoal>0){const left=fatGoal-f;fatState.textContent=left>=0?("还差 "+left+"g"):("已超 "+(0-left)+"g");fatState.style.color=left>=0?"var(--sub)":"var(--warn)";}
+  if(fatGoal>0){const left=Math.round(fatGoal-f);fatState.textContent=left>=0?("还差 "+left+"g"):("已超 "+(-left)+"g");fatState.style.color=left>=0?"var(--sub)":"var(--warn)";}
   else{fatState.textContent="未设目标";fatState.style.color="var(--sub)";}
   // 净热量 tile 标签
   document.getElementById("ovNetLbl").textContent = net>=0 ? "盈余" : "缺口";
