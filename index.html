@@ -1219,15 +1219,22 @@ function autoScale(id){
   save(); toast("已按重量重算");
 }
 function addFood(){ openAddModal(); }
-function openAddModal(i){
+function openAddModal(arg){
   const mName=document.getElementById("mName"),
         mAmount=document.getElementById("mAmount"),
         mUnit=document.getElementById("mUnit"),
         mK=document.getElementById("mK"),mP=document.getElementById("mP"),
         mC=document.getElementById("mC"),mF=document.getElementById("mF");
   mBase=null;
-  if(i!=null && PRESETS[i]){
-    const x=PRESETS[i];
+  if(typeof arg==="object" && arg){               // 直接预填（来自拍照识别）
+    const x=arg;
+    mName.value=x.name||"";
+    mAmount.value=(x.amt!=null)?x.amt:"";
+    mUnit.value=x.unit||"";
+    mK.value=x.k||0; mP.value=x.p||0; mC.value=x.c||0; mF.value=x.f||0;
+    mBase={bit:x.bit||1,bk:x.k||0,bp:x.p||0,bc:x.c||0,bf:x.f||0};
+  }else if(typeof arg==="number" && PRESETS[arg]){ // 来自常用食物预设
+    const x=PRESETS[arg];
     const sp=String(x.u).match(/^\s*([0-9]*\.?[0-9]+)\s*(.*)$/);
     const baseW=(sp&&sp[2])?parseFloat(sp[1]):1;     // 牛肉→100，鸡蛋→1
     const baseU=(sp&&sp[2])?sp[2]:x.u;               // 牛肉→"g"，鸡蛋→"个"
@@ -1253,6 +1260,7 @@ function mScale(){
 function closeAddSheet(e){
   if(e && e.target!==e.currentTarget)return;   // 仅点遮罩关闭
   document.getElementById("addSheet").style.display="none";
+  recogQueue=[];                                 // 取消添加时清空待加入队列
 }
 function confirmAddModal(){
   const name=document.getElementById("mName").value.trim();
@@ -1266,6 +1274,7 @@ function confirmAddModal(){
   if(!name&&!k){toast("填个名称或热量");return;}
   if(amtRaw===""||isNaN(amt)){toast("先填重量/数量");return;}
   S.diet.push({id:uid(),date:today(),name:name||"未命名",unit,qty:amt,k,p,c,f});
+  if(recogQueue.length){ recogQueue.shift(); nextRecog(); return; }
   document.getElementById("addSheet").style.display="none";
   save(); renderToday(); toast("已添加 "+name);
 }
@@ -1800,6 +1809,7 @@ async function analyzeFood(file){
     box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div><div style="margin-top:10px"><button class="btn sec2" onclick="closeRecogSheet()">关闭</button></div></div>';
   }
 }
+let recogQueue=[];
 function renderRecog(arr){
   const items=arr.map(x=>{
     const k=+x.kcal||0,p=+x.p||0,c=+x.c||0,f=+x.f||0;
@@ -1812,23 +1822,15 @@ function renderRecog(arr){
       k:Math.round(k*s),p:+(p*s).toFixed(1),c:+(c*s).toFixed(1),f:+(f*s).toFixed(1),
       qty,unit,bk:k,bp:p,bc:c,bf:f,bit:basis,isLabel};
   });
-  window.__recogItems=items;
-  const rows=items.map((x,i)=>`
-    <div class="recog-item" data-i="${i}">
-      <label class="ri-head"><input type="checkbox" class="rk" checked> 加入记录${x.isLabel?' <span style="color:var(--sub)">·营养标签(每100g)</span>':''}</label>
-      <label class="ri-l">食物名称</label>
-      <input data-f="name" value="${esc(x.name)}" placeholder="名称">
-      <div class="ri-grid">
-        <div><label class="ri-l">热量 (kcal)</label><input data-f="kcal" type="number" inputmode="numeric" value="${x.k}"></div>
-        <div><label class="ri-l">蛋白质 (g)</label><input data-f="p" type="number" inputmode="numeric" value="${x.p}"></div>
-        <div><label class="ri-l">碳水 (g)</label><input data-f="c" type="number" inputmode="numeric" value="${x.c}"></div>
-        <div><label class="ri-l">脂肪 (g)</label><input data-f="f" type="number" inputmode="numeric" value="${x.f}"></div>
-      </div>
-      ${x.isLabel?'<div class="hint" style="margin-top:6px">已按每100g录入，加入后在「今日吃了啥」点 ✎ 改克数即可自动重算。</div>':''}
-    </div>`).join("");
-  document.getElementById("recogTitle").textContent="识别结果（可修改后加入）";
-  document.getElementById("recogInner").innerHTML='<div class="card"><h2>识别结果（可修改后加入）</h2>'+rows+
-    '<div style="display:flex;gap:10px;margin-top:6px"><button class="btn" style="flex:1" onclick="confirmRecog()">✓ 加入饮食记录</button><button class="btn sec2" style="flex:1" onclick="cancelRecog()">取消</button></div></div>';
+  recogQueue=items;
+  document.getElementById("recogTitle").textContent="识别成功";
+  document.getElementById("recogSheet").style.display="none";   // 关掉识别 loading，改用「添加食物」弹窗
+  nextRecog();
+}
+function nextRecog(){
+  if(!recogQueue.length){recogQueue=[];return;}
+  const it=recogQueue[0];
+  openAddModal(it);   // 直接弹「添加食物」并预填，确认后再取下一项
 }
 function cancelRecog(){window.__recogItems=[];document.getElementById("recogInner").innerHTML="";document.getElementById("recogSheet").style.display="none";}
 function confirmRecog(){
