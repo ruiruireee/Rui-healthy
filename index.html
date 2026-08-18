@@ -845,6 +845,17 @@ function normalize(d){
   if(d.goals&&typeof d.goals==="object")Object.assign(s.goals,d.goals);
   if(d.api&&typeof d.api==="object")Object.assign(s.api,d.api); // 保留已保存的 API Key
   if(d.ui&&typeof d.ui==="object")Object.assign(s.ui,d.ui);
+  // 自检：把"单位里塞了数字"的老脏数据拆开（如 "100g" → qty=100 unit="g"）
+  const splitUnit = u => {
+    if(!u)return null;
+    const m=String(u).match(/^\s*([0-9]*\.?[0-9]+)\s*(.*)$/);
+    return (m && m[2])?{num:parseFloat(m[1]), rest:m[2]}:null;
+  };
+  s.diet.forEach(it=>{
+    const sp=splitUnit(it.unit);
+    if(sp){ it.qty=(+it.qty||1)*sp.num; it.unit=sp.rest; }
+  });
+  s.customEx.forEach(it=>{const sp=splitUnit(it.unit);if(sp){it.qty=(+it.qty||1)*sp.num;it.unit=sp.rest;}});
   // 自检：若蛋白+碳水的热量已超出总热量目标（说明宏量比例是为更高热量设计的），按比例重分配
   if(s.goals.kcal && (s.goals.pro||0)*4 + (s.goals.carb||0)*4 > s.goals.kcal*1.02){
     const m=distributeMacros(s.goals.kcal);
@@ -1120,16 +1131,23 @@ function renderDietList(boxId,totalId){
       : ((x.qty&&x.qty!=1)?(' ×'+x.qty+(x.unit||"")):'');
     if(x.id===editingFoodId){
       const qty=x.qty||1, unit=x.unit||"份";
+      const isG = unit==="g" || /克|g$/.test(unit);
+      const wVal = isG ? qty : "";
+      const numVal = isG ? 1 : qty;
+      const uVal = isG ? "" : unit;
       const scaleBtn = x.bk!=null
         ? '<button class="btn sec2 sm" style="width:100%;margin-top:12px" onclick="autoScale(\''+x.id+'\')">↻ 按克数/份量自动重算营养</button>'
         : '';
       return `<div class="edit-card">
         <label>名称</label>
         <input data-e="name" value="${esc(x.name)}" placeholder="食物名称">
-        <label>重量 / 数量（克 g，或 个/碗/份）</label>
+        <label>重量（克 g，自由输入）</label>
+        <input data-e="weight" type="number" inputmode="decimal" min="0" step="any" value="${wVal}" placeholder="如 20" oninput="autoScale('${x.id}')">
+        <div class="hint" style="margin:2px 0 4px">↑ 填了「克」就直接按克记；不填则按下方「数量 / 单位」记（如 2 个、1.5 碗）。</div>
+        <label>数量 / 单位（非克时用，可选）</label>
         <div class="eqty">
-          <input data-e="qty" type="number" inputmode="decimal" min="0" step="any" value="${qty}" oninput="autoScale('${x.id}')">
-          <input data-e="unit" value="${esc(unit)}" placeholder="g / 个 / 碗 / 份">
+          <input data-e="qty" type="number" inputmode="decimal" min="0" step="any" value="${numVal}" oninput="autoScale('${x.id}')">
+          <input data-e="unit" value="${esc(uVal)}" placeholder="g / 个 / 碗 / 份">
         </div>
         <label>营养（该份量合计 · kcal / g）</label>
         <div class="egrid">
@@ -1163,8 +1181,15 @@ function saveEditFood(id){
   const g=f=>row.querySelector('[data-e="'+f+'"]').value;
   const it=S.diet.find(x=>x.id===id); if(!it)return;
   it.name=g("name")||"未命名";
-  let q=parseFloat(g("qty")); if(isNaN(q))q=1; if(q<0)q=0; it.qty=q;
-  it.unit=(g("unit")||"").trim()||"g";
+  const wRaw=g("weight"), w=parseFloat(wRaw);
+  if(wRaw!=="" && !isNaN(w) && w>=0){
+    it.qty=w;
+    it.unit="g";
+  }else{
+    let q=parseFloat(g("qty")); if(isNaN(q))q=1; if(q<0)q=0;
+    it.qty=q;
+    it.unit=(g("unit")||"").trim()||"g";
+  }
   it.k=+g("k")||0; it.p=+g("p")||0; it.c=+g("c")||0; it.f=+g("f")||0;
   editingFoodId=null; save(); renderToday(); toast("已更新");
 }
@@ -1173,15 +1198,21 @@ function autoScale(id){
   const sec=document.querySelector(".sec.active");
   const row=sec?sec.querySelector(".edit-card"):document.querySelector(".edit-card");
   if(!row)return;
-  let q=parseFloat(row.querySelector('[data-e="qty"]').value); if(isNaN(q))q=1; if(q<0)q=0;
+  // 优先用「重量(克)」，否则用「数量」
+  const wEl=row.querySelector('[data-e="weight"]');
+  const qEl=row.querySelector('[data-e="qty"]');
+  const wRaw=wEl?wEl.value:"", w=parseFloat(wRaw);
+  let q, isGram=false;
+  if(wRaw!=="" && !isNaN(w) && w>=0){ q=w; isGram=true; }
+  else{ q=parseFloat(qEl?qEl.value:1); if(isNaN(q))q=1; if(q<0)q=0; }
   const bit=it.bit||1;                     // 营养基准克数：普通食物=1，营养标签=100
-  it.qty=q;
+  it.qty=q; it.unit=isGram?"g":((qEl&&row.querySelector('[data-e="unit"]').value.trim())||it.unit||"g");
   it.k=Math.round(it.bk*q/bit); it.p=Math.round(it.bp*q/bit); it.c=Math.round(it.bc*q/bit); it.f=Math.round(it.bf*q/bit);
   row.querySelector('[data-e="k"]').value=it.k;
   row.querySelector('[data-e="p"]').value=it.p;
   row.querySelector('[data-e="c"]').value=it.c;
   row.querySelector('[data-e="f"]').value=it.f;
-  save(); toast("已按份量重算");
+  save(); toast("已按克数/份量重算");
 }
 function addFood(){
   const name=document.getElementById("fName").value.trim();
@@ -1208,11 +1239,15 @@ function quickAdd(i){const x=PRESETS[i];
   const qEl=document.getElementById("presetQty");
   const q=Math.max(0,(+(qEl?qEl.value:1))||1);
   const uEl=document.getElementById("presetUnit");
-  const unit=(uEl&&uEl.value.trim())||x.u;
-  S.diet.push({id:uid(),date:today(),name:x.n,unit,qty:q,
+  let unit=(uEl&&uEl.value.trim())||x.u;
+  // 若预设单位本身含数字（如 "100g"），把数字并入 qty，单位留 g
+  const sp=unit.match(/^\s*([0-9]*\.?[0-9]+)\s*(.*)$/);
+  let qty=q;
+  if(sp && sp[2]){ qty=q*parseFloat(sp[1]); unit=sp[2]; }
+  S.diet.push({id:uid(),date:today(),name:x.n,unit,qty,
     bk:x.k,bp:x.p,bc:x.c,bf:x.f,
-    k:Math.round(x.k*q),p:Math.round(x.p*q),c:Math.round(x.c*q),f:Math.round(x.f*q)});
-  save();renderToday();toast("已添加 "+x.n+" ×"+q+unit);
+    k:Math.round(x.k*qty),p:Math.round(x.p*qty),c:Math.round(x.c*qty),f:Math.round(x.f*qty)});
+  save();renderToday();toast("已添加 "+x.n+" "+qty+unit);
 }
 
 /* ---------- 练了啥 ---------- */
