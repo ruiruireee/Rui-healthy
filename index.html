@@ -505,7 +505,7 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
     <div class="card">
       <h2>常用食物 · 一键添加</h2>
       <div class="grid2" style="margin-bottom:10px">
-        <div><label>数量</label><input id="presetQty" type="number" inputmode="decimal" min="0" step="0.5" value="1"></div>
+        <div><label>数量</label><input id="presetQty" type="number" inputmode="decimal" min="0" step="any" value="1"></div>
         <div><label>单位（可选）</label><input id="presetUnit" placeholder="个/碗/份"></div>
       </div>
       <div class="chips" id="presetChips"></div>
@@ -518,6 +518,10 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
       <summary style="cursor:pointer;color:var(--sub);font-size:13px;font-weight:600">＋ 手动添加食物</summary>
       <div style="margin-top:12px">
         <label>名称</label><input id="fName" placeholder="如 鸡胸肉">
+        <div class="grid2">
+          <div><label>重量（克 g，可选）</label><input id="fGram" type="number" inputmode="decimal" step="any" min="0" placeholder="如 150"></div>
+          <div><label>单位（可选）</label><input id="fUnit" placeholder="个/碗/份，留空=克"></div>
+        </div>
         <div class="grid2">
           <div><label>热量 kcal</label><input id="fKcal" type="number" inputmode="numeric" placeholder="0"></div>
           <div><label>蛋白 g</label><input id="fP" type="number" inputmode="numeric" placeholder="0"></div>
@@ -1111,19 +1115,21 @@ function renderDietList(boxId,totalId){
   const box=document.getElementById(boxId); if(!box)return;
   if(!items.length){box.innerHTML='<div class="empty">今天还没吃，去首页拍张照或点常用食物吧</div>';return;}
   box.innerHTML=items.map(x=>{
-    const portion=(x.qty&&x.qty!=1)?(' ×'+x.qty+(x.unit||"")):'';
+    const portion = (x.unit==="g")
+      ? (' '+x.qty+'g')
+      : ((x.qty&&x.qty!=1)?(' ×'+x.qty+(x.unit||"")):'');
     if(x.id===editingFoodId){
       const qty=x.qty||1, unit=x.unit||"份";
       const scaleBtn = x.bk!=null
-        ? '<button class="btn sec2 sm" style="width:100%;margin-top:12px" onclick="autoScale(\''+x.id+'\')">↻ 按份量自动重算营养</button>'
+        ? '<button class="btn sec2 sm" style="width:100%;margin-top:12px" onclick="autoScale(\''+x.id+'\')">↻ 按克数/份量自动重算营养</button>'
         : '';
       return `<div class="edit-card">
         <label>名称</label>
         <input data-e="name" value="${esc(x.name)}" placeholder="食物名称">
-        <label>份量 / 单位（例：2 个、1.5 碗）</label>
+        <label>重量 / 数量（克 g，或 个/碗/份）</label>
         <div class="eqty">
-          <input data-e="qty" type="number" inputmode="decimal" min="0" step="0.5" value="${qty}" oninput="autoScale('${x.id}')">
-          <input data-e="unit" value="${esc(unit)}" placeholder="个/碗/份">
+          <input data-e="qty" type="number" inputmode="decimal" min="0" step="any" value="${qty}" oninput="autoScale('${x.id}')">
+          <input data-e="unit" value="${esc(unit)}" placeholder="g / 个 / 碗 / 份">
         </div>
         <label>营养（该份量合计 · kcal / g）</label>
         <div class="egrid">
@@ -1157,7 +1163,8 @@ function saveEditFood(id){
   const g=f=>row.querySelector('[data-e="'+f+'"]').value;
   const it=S.diet.find(x=>x.id===id); if(!it)return;
   it.name=g("name")||"未命名";
-  let q=parseFloat(g("qty")); if(isNaN(q))q=1; if(q<0)q=0; it.qty=q; it.unit=g("unit")||"份";
+  let q=parseFloat(g("qty")); if(isNaN(q))q=1; if(q<0)q=0; it.qty=q;
+  it.unit=(g("unit")||"").trim()||"g";
   it.k=+g("k")||0; it.p=+g("p")||0; it.c=+g("c")||0; it.f=+g("f")||0;
   editingFoodId=null; save(); renderToday(); toast("已更新");
 }
@@ -1181,8 +1188,13 @@ function addFood(){
   const k=+document.getElementById("fKcal").value||0,
         p=+document.getElementById("fP").value||0,c=+document.getElementById("fC").value||0,f=+document.getElementById("fF").value||0;
   if(!name&&!k){toast("填个名称或热量");return;}
-  S.diet.push({id:uid(),date:today(),name:name||"未命名",unit:"份",qty:1,k,p,c,f});save();
-  ["fName","fKcal","fP","fC","fF"].forEach(i=>document.getElementById(i).value="");
+  const gEl=document.getElementById("fGram");
+  const g=parseFloat(gEl?gEl.value:"");
+  const uEl=document.getElementById("fUnit");
+  let unit="份", qty=1;
+  if(!isNaN(g)){ unit=(uEl&&uEl.value.trim())||"g"; qty=g; }
+  S.diet.push({id:uid(),date:today(),name:name||"未命名",unit,qty,k,p,c,f});save();
+  ["fName","fGram","fUnit","fKcal","fP","fC","fF"].forEach(i=>{const e=document.getElementById(i);if(e)e.value="";});
   renderToday();toast("已添加");
 }
 function delFood(id){S.diet=S.diet.filter(x=>x.id!==id);save();renderToday();}
