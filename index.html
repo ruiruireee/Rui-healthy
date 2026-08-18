@@ -38,6 +38,12 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:16px;
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.28)}
   .card h2{font-size:13px;margin:0 0 12px;color:var(--sub);font-weight:600;letter-spacing:.6px}
+  .card.collapsible > h2{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;margin-bottom:12px}
+  .card.collapsible.collapsed > h2{margin-bottom:0}
+  .card.collapsible > h2 .chev{transition:transform .2s;font-size:12px;color:var(--sub);flex:none;margin-left:8px}
+  .card.collapsible.collapsed > h2 .chev{transform:rotate(-90deg)}
+  .card.collapsible.collapsed .card-body{display:none}
+  .card-body{overflow:hidden}
   .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
   .goal-form{display:flex;flex-direction:column;gap:14px}
   .goal-field{display:flex;flex-direction:column;gap:4px}
@@ -500,15 +506,19 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
 
   <!-- 吃了啥 -->
   <section class="sec" id="s-diet">
-    <div class="card" id="recogHistCard">
-      <h2>已拍过 · 点一下一键加回</h2>
-      <div class="hint" style="margin-bottom:8px">拍照识别添加过的食物会自动留在这里，份量沿用上次，不用重拍。</div>
-      <div class="chips" id="recogHistChips"></div>
+    <div class="card collapsible collapsed" id="recogHistCard">
+      <h2 onclick="toggleCard('recogHistCard')">已拍过 · 点一下一键加回 <span class="chev">▾</span></h2>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:8px">拍照识别添加过的食物会自动留在这里，份量沿用上次，不用重拍。</div>
+        <div class="chips" id="recogHistChips"></div>
+      </div>
     </div>
-    <div class="card">
-      <h2>常用食物 · 点一下填份量</h2>
-      <div class="hint" style="margin-bottom:8px">点任意食物，会弹出窗口让你填重量/数量，确认后再加入。</div>
-      <div class="chips" id="presetChips"></div>
+    <div class="card collapsible collapsed" id="presetCard">
+      <h2 onclick="toggleCard('presetCard')">常用食物 · 点一下填份量 <span class="chev">▾</span></h2>
+      <div class="card-body">
+        <div class="hint" style="margin-bottom:8px">点任意食物，会弹出窗口让你填重量/数量，确认后再加入。</div>
+        <div class="chips" id="presetChips"></div>
+      </div>
     </div>
     <div class="card">
       <h2>今日吃了啥 · 合计 <span id="dietTotal">0</span> kcal</h2>
@@ -2094,10 +2104,30 @@ async function doShare(){
   }catch(e){saveShare();}
 }
 
+/* 折叠「已拍过 / 常用食物」卡片，状态持久化，避免页面过长把「今日吃了啥」挤到下面 */
+function applyFold(){
+  try{
+    const f=JSON.parse(localStorage.getItem("fitdiet_fold")||"{}");
+    ["recogHistCard","presetCard"].forEach(id=>{
+      const c=document.getElementById(id); if(!c)return;
+      if(f[id]===true)c.classList.add("collapsed");
+      else if(f[id]===false)c.classList.remove("collapsed");
+    });
+  }catch(e){}
+}
+function toggleCard(id){
+  const c=document.getElementById(id); if(!c)return;
+  const collapsed=c.classList.toggle("collapsed");
+  try{
+    const f=JSON.parse(localStorage.getItem("fitdiet_fold")||"{}");
+    f[id]=collapsed; localStorage.setItem("fitdiet_fold",JSON.stringify(f));
+  }catch(e){}
+}
+
 /* init */
 initTheme();
 document.getElementById("todayLabel").textContent=new Date().toLocaleDateString("zh-CN",{month:"long",day:"numeric",weekday:"short"});
-renderPresets();renderToday();
+renderPresets();renderToday();applyFold();
 </script>
 <div id="shareModal">
   <img id="shareImg" alt="今日成果">
