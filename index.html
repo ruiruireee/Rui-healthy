@@ -1311,7 +1311,7 @@ function selectEx(i){
   document.getElementById("exDetail").style.display="block";
   document.getElementById("exNameLbl").textContent=selEx.n;
   document.getElementById("exMin").value="";
-  document.getElementById("exWeight").value=S.goals.weight||65;
+  document.getElementById("exWeight").value=currentWeight()||65;
   document.getElementById("exWeightWrap").style.display=selEx.kph?"none":"";
   calcExKcal();
   document.getElementById("exDetail").scrollIntoView({behavior:"smooth",block:"nearest"});
@@ -1331,7 +1331,6 @@ function addWorkout(){
   const rec={id:uid(),date:today(),name:selEx.n,min,kcal:k};
   if(selEx.met)rec.met=selEx.met; else rec.kph=selEx.kph;
   S.workouts.push(rec);
-  if(selEx.met)S.goals.weight=w; // 记住体重（MET 运动才需要），下次直接用
   save();renderWorkout();
   const st=workoutStreak();
   toast("🔥 "+selEx.n+" 完成！+"+k+" kcal"+(st>1?" · 连续 "+st+" 天🔥":""));
