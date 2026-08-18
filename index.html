@@ -1117,7 +1117,7 @@ function renderDietList(boxId,totalId){
       const scaleBtn = x.bk!=null
         ? '<button class="btn sec2 sm" style="width:100%;margin-top:12px" onclick="autoScale(\''+x.id+'\')">↻ 按份量自动重算营养</button>'
         : '';
-      return `<div class="edit-card" id="editRow">
+      return `<div class="edit-card">
         <label>名称</label>
         <input data-e="name" value="${esc(x.name)}" placeholder="食物名称">
         <label>份量 / 单位（例：2 个、1.5 碗）</label>
@@ -1151,18 +1151,22 @@ function renderDietList(boxId,totalId){
 function editFood(id){editingFoodId=id;renderDiet();}
 function cancelEditFood(){editingFoodId=null;renderDiet();}
 function saveEditFood(id){
-  const row=document.getElementById("editRow"); if(!row)return;
+  const sec=document.querySelector(".sec.active");
+  const row=sec?sec.querySelector(".edit-card"):document.querySelector(".edit-card");
+  if(!row)return;
   const g=f=>row.querySelector('[data-e="'+f+'"]').value;
   const it=S.diet.find(x=>x.id===id); if(!it)return;
   it.name=g("name")||"未命名";
-  it.qty=Math.max(0,(+g("qty"))||1); it.unit=g("unit")||"份";
+  let q=parseFloat(g("qty")); if(isNaN(q))q=1; if(q<0)q=0; it.qty=q; it.unit=g("unit")||"份";
   it.k=+g("k")||0; it.p=+g("p")||0; it.c=+g("c")||0; it.f=+g("f")||0;
   editingFoodId=null; save(); renderToday(); toast("已更新");
 }
 function autoScale(id){
   const it=S.diet.find(x=>x.id===id); if(!it||it.bk==null)return;
-  const row=document.getElementById("editRow"); if(!row)return;
-  const q=Math.max(0,(+row.querySelector('[data-e="qty"]').value)||1);
+  const sec=document.querySelector(".sec.active");
+  const row=sec?sec.querySelector(".edit-card"):document.querySelector(".edit-card");
+  if(!row)return;
+  let q=parseFloat(row.querySelector('[data-e="qty"]').value); if(isNaN(q))q=1; if(q<0)q=0;
   const bit=it.bit||1;                     // 营养基准克数：普通食物=1，营养标签=100
   it.qty=q;
   it.k=Math.round(it.bk*q/bit); it.p=Math.round(it.bp*q/bit); it.c=Math.round(it.bc*q/bit); it.f=Math.round(it.bf*q/bit);
