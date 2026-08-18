@@ -902,10 +902,10 @@ function renderToday(){
         c=items.reduce((a,b)=>a+b.c,0), f=items.reduce((a,b)=>a+b.f,0);
   const burn=S.workouts.filter(x=>x.date===d).reduce((a,b)=>a+(b.kcal||0),0);
   const net=k-burn;
-  document.getElementById("ovKcal").textContent=k;
-  document.getElementById("ovIn").textContent=k;
-  document.getElementById("ovBurn").textContent=burn;
-  document.getElementById("ovNet").textContent=(net>0?"+":"")+net;
+  document.getElementById("ovKcal").textContent=Math.round(k);
+  document.getElementById("ovIn").textContent=Math.round(k);
+  document.getElementById("ovBurn").textContent=Math.round(burn);
+  document.getElementById("ovNet").textContent=(net>0?"+":"")+Math.round(net);
   document.getElementById("goalKcalLbl").textContent=S.goals.kcal;
   const kr=document.getElementById("kcalRing"); if(kr){const C=2*Math.PI*66;kr.setAttribute("stroke-dashoffset",(C-C*Math.min(100,Math.round(k/S.goals.kcal*100))/100).toFixed(1));}
   // 每日热量目标状态横幅
@@ -915,7 +915,7 @@ function renderToday(){
     banner.className="cal-banner over";
     document.getElementById("calBEmoji").textContent="🔴";
     document.getElementById("calBText").textContent="吃超啦，管住嘴";
-    document.getElementById("calBSub").textContent="已超 "+diff+" kcal · 目标 "+calGoal+" kcal";
+    document.getElementById("calBSub").textContent="已超 "+Math.round(diff)+" kcal · 目标 "+calGoal+" kcal";
   }else if(diff===0){
     banner.className="cal-banner under";
     document.getElementById("calBEmoji").textContent="✅";
@@ -931,7 +931,7 @@ function renderToday(){
       banner.className="cal-banner under";
       document.getElementById("calBEmoji").textContent="🟢";
       document.getElementById("calBText").textContent="还能吃，营养要够";
-      document.getElementById("calBSub").textContent="还能吃 "+(-diff)+" kcal · 目标 "+calGoal+" kcal";
+      document.getElementById("calBSub").textContent="还能吃 "+Math.round(-diff)+" kcal · 目标 "+calGoal+" kcal";
     }
   }
   // 营养目标达成（蛋白 / 碳水 / 脂肪，统一 Math.round 避免浮点尾数）
@@ -964,11 +964,11 @@ function renderToday(){
     document.getElementById("inVal2").textContent=k+" kcal";
     document.getElementById("exVal2").textContent=burn+" kcal";
     const balEl=document.getElementById("balVal");
-    balEl.textContent=(bal>=0?"盈余 +":"缺口 ")+bal+" kcal";
+    balEl.textContent=(bal>=0?"盈余 +":"缺口 ")+Math.round(bal)+" kcal";
     balEl.style.color = bal>=0 ? "var(--warn)" : "var(--accent)";
     document.getElementById("balHint").innerHTML = bal>=0
       ? "⚠️ 今日摄入高于「基础代谢+运动」消耗，处于热量盈余（易增重）"
-      : "✅ 今日处于热量缺口（利于减脂），缺口 "+Math.abs(bal)+" kcal";
+      : "✅ 今日处于热量缺口（利于减脂），缺口 "+Math.abs(Math.round(bal))+" kcal";
   }else{
     ["bmrVal","tdeeVal","balVal"].forEach(i=>document.getElementById(i).textContent="—");
     document.getElementById("inVal2").textContent=k+" kcal";
@@ -1178,7 +1178,7 @@ function renderDietList(boxId,totalId){
     }
     return `<div class="row">
       <div><div class="n">${esc(x.name)}${portion}</div>
-        <div class="m">${x.k} kcal · 蛋${x.p} 碳${x.c} 脂${x.f}</div></div>
+        <div class="m">${Math.round(x.k)} kcal · 蛋${Math.round(x.p)} 碳${Math.round(x.c)} 脂${Math.round(x.f)}</div></div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="del" style="font-size:16px" onclick="editFood('${x.id}')">✎</span>
         <span class="del" onclick="delFood('${x.id}')">✕</span>
