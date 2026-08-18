@@ -500,6 +500,11 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
 
   <!-- 吃了啥 -->
   <section class="sec" id="s-diet">
+    <div class="card" id="recogHistCard">
+      <h2>已拍过 · 点一下一键加回</h2>
+      <div class="hint" style="margin-bottom:8px">拍照识别添加过的食物会自动留在这里，份量沿用上次，不用重拍。</div>
+      <div class="chips" id="recogHistChips"></div>
+    </div>
     <div class="card">
       <h2>常用食物 · 点一下填份量</h2>
       <div class="hint" style="margin-bottom:8px">点任意食物，会弹出窗口让你填重量/数量，确认后再加入。</div>
@@ -847,6 +852,7 @@ function seed(){
     body:[{id:uid(),date:t,weight:60.65,bmi:22.5,fat:30.8,bmr:1242,muscle:39.1,water:50.6,bone:2.5,protein:13.8,bodyAge:37,note:"早起空腹",stickers:[]}],
     customEx:[],
     rewards:{},
+    recog:[],
     goals:{kcal:2000,pro:120,carb:250,fat:0,weight:65,gender:"男",age:30,height:170,activity:1.375},
     api:{key:"",base:"https://api.openai.com/v1",model:"gpt-4o-mini"},
     ui:{theme:"dark"}
@@ -860,6 +866,7 @@ function normalize(d){
   if(Array.isArray(d.body))s.body=d.body;
   if(Array.isArray(d.customEx))s.customEx=d.customEx;
   if(d.rewards&&typeof d.rewards==="object")s.rewards=d.rewards; // 日历手动⭐奖励
+  if(Array.isArray(d.recog))s.recog=d.recog; // 已拍过（拍照识别后添加的食物）
   if(d.goals&&typeof d.goals==="object")Object.assign(s.goals,d.goals);
   if(d.api&&typeof d.api==="object")Object.assign(s.api,d.api); // 保留已保存的 API Key
   if(d.ui&&typeof d.ui==="object")Object.assign(s.ui,d.ui);
@@ -1136,6 +1143,7 @@ let mBase=null;   // 添加弹窗的营养缩放基准
 function renderDiet(){
   renderDietList("dietList","dietTotal");
   renderDietList("homeDietList","homeDietTotal");
+  renderRecogHistory();   // 刷新「已拍过」列表
 }
 function renderDietList(boxId,totalId){
   const d=today();
@@ -1220,6 +1228,7 @@ function autoScale(id){
 }
 function addFood(){ openAddModal(); }
 function openAddModal(arg){
+  mFromRecog=!!(typeof arg==="object" && arg && arg.fromRecog);   // 仅拍照识别渠道才标记
   const mName=document.getElementById("mName"),
         mAmount=document.getElementById("mAmount"),
         mUnit=document.getElementById("mUnit"),
@@ -1274,6 +1283,10 @@ function confirmAddModal(){
   if(!name&&!k){toast("填个名称或热量");return;}
   if(amtRaw===""||isNaN(amt)){toast("先填重量/数量");return;}
   S.diet.push({id:uid(),date:today(),name:name||"未命名",unit,qty:amt,k,p,c,f});
+  if(mFromRecog){   // 拍照识别添加 → 记入「已拍过」，下次一键加，份量沿用本次
+    S.recog=S.recog.filter(r=>r.name!==name);
+    S.recog.unshift({name, qty:amt, unit, k, p, c, f});
+  }
   save(); renderToday(); toast("已添加 "+name);    // 先存盘+刷新首页，再决定是否弹下一项
   if(recogQueue.length){ recogQueue.shift(); nextRecog(); return; }
   document.getElementById("addSheet").style.display="none";
@@ -1284,6 +1297,25 @@ function renderPresets(){
     `<span class="chip" onclick="openAddModal(${i})">${x.n} · ${x.k}</span>`).join("");
   const pc=document.getElementById("presetChips"); if(pc)pc.innerHTML=chips;
   const hpc=document.getElementById("homePresets"); if(hpc)hpc.innerHTML=chips;
+}
+function renderRecogHistory(){
+  const card=document.getElementById("recogHistCard");
+  const box=document.getElementById("recogHistChips");
+  if(!box)return;
+  if(!S.recog||!S.recog.length){ if(card)card.style.display="none"; return; }
+  if(card)card.style.display="";
+  box.innerHTML=S.recog.map((x,i)=>{
+    const unit=x.unit==="g"?"g":(x.unit||"份");
+    const amt=(x.qty%1===0)?x.qty:x.qty.toFixed(1);
+    return `<span class="chip" onclick="addFromRecog(${i})">${esc(x.name)} · ${amt}${unit} · ${x.k}kcal ✕</span>`;
+  }).join("");
+}
+function addFromRecog(i){
+  const x=S.recog[i]; if(!x)return;
+  S.diet.push({id:uid(),date:today(),name:x.name,unit:x.unit,qty:x.qty,k:x.k,p:x.p,c:x.c,f:x.f});
+  save(); renderToday(); toast("已添加 "+x.name);
+  // 把这项挪到最前，方便下次再点
+  S.recog.splice(i,1); S.recog.unshift(x); save(); renderRecogHistory();
 }
 
 /* ---------- 练了啥 ---------- */
@@ -1809,6 +1841,7 @@ async function analyzeFood(file){
   }
 }
 let recogQueue=[];
+let mFromRecog=false;   // 当前「添加食物」弹窗是否来自拍照识别（决定要不要写入"已拍过"）
 function renderRecog(arr){
   // 去重：GLM 偶尔会重复返回相同名称（如三份「风味发酵乳」）
   const seen=new Set();
@@ -1826,7 +1859,7 @@ function renderRecog(arr){
     const s=qty/basis;                       // 按实际份量缩放成「该份合计」
     return {name:x.name||(isLabel?"包装食品":"未命名"),
       k:Math.round(k*s),p:+(p*s).toFixed(1),c:+(c*s).toFixed(1),f:+(f*s).toFixed(1),
-      qty,unit,bk:k,bp:p,bc:c,bf:f,bit:basis,isLabel};
+      qty,unit,bk:k,bp:p,bc:c,bf:f,bit:basis,isLabel,fromRecog:true};
   });
   recogQueue=items;
   document.getElementById("recogTitle").textContent="识别成功";
