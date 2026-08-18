@@ -402,6 +402,7 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
     <!-- 📷 拍照识别（最大置顶） -->
     <button class="btn" id="camBtn" style="font-size:18px;padding:18px 14px;background:linear-gradient(90deg,#22d3ee,#34d399);color:#04222e;margin-bottom:14px;font-weight:800;box-shadow:0 8px 24px rgba(52,211,153,.25)" onclick="openCamPicker()">📷 拍照识别食物</button>
     <input id="cam" type="file" accept="image/*" capture="environment" style="display:none" onchange="onCam(this)">
+    <input id="cam" type="file" accept="image/*" capture="environment" style="display:none" onchange="onCam(this)">
     <input id="camAlbum" type="file" accept="image/*" style="display:none" onchange="onCam(this)">
 
     <!-- 今日热量摄入（环形） -->
@@ -739,8 +740,13 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
   </section>
 </div>
 
-<!-- 弹窗必须放在 .wrap 外面、body 直接子级，避免被 .sec 的动画 transform 创建 stacking context 把 position:fixed 锁死在 section 里 -->
-<div id="recogBox"></div>
+<!-- 识别结果弹窗：和 addSheet 同层级，避免被遮挡 -->
+<div id="recogSheet" class="sheet-mask" style="display:none" onclick="if(event.target===event.currentTarget)closeRecogSheet()">
+  <div class="sheet">
+    <div class="sheet-title" id="recogTitle">🔍 拍照识别</div>
+    <div id="recogInner"></div>
+  </div>
+</div>
 <div id="camSheet" class="sheet-mask" style="display:none" onclick="closeCamPicker(event)">
   <div class="sheet">
     <div class="sheet-title">选择图片来源</div>
@@ -1732,9 +1738,12 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 function openCamPicker(){document.getElementById("camSheet").style.display="flex";}
 function closeCamPicker(e){if(!e||e.target===e.currentTarget)document.getElementById("camSheet").style.display="none";}
 function pickCam(id){document.getElementById("camSheet").style.display="none";document.getElementById(id).click();}
+function closeRecogSheet(){document.getElementById("recogSheet").style.display="none";document.getElementById("recogInner").innerHTML="";}
 async function onCam(el){
   const f=el.files&&el.files[0]; if(!f){return;}
-  document.getElementById("recogBox").innerHTML='<div class="card"><div class="empty">🔍 识别中…</div></div>';
+  document.getElementById("recogTitle").textContent="🔍 识别中…";
+  document.getElementById("recogInner").innerHTML='<div class="card"><div class="empty">🔍 识别中…</div></div>';
+  document.getElementById("recogSheet").style.display="flex";
   await analyzeFood(f);
   el.value="";
 }
@@ -1762,9 +1771,9 @@ function prepImage(file){
 }
 async function analyzeFood(file){
   const api=S.api||{};
-  const box=()=>document.getElementById("recogBox");
+  const box=()=>document.getElementById("recogInner");
   if(!api.key){
-    box().innerHTML='<div class="card"><div class="empty">⚠️ 请先在「更多 → 拍照识别」填写 API Key</div></div>';
+    box().innerHTML='<div class="card"><div class="empty">⚠️ 请先在「更多 → 拍照识别」填写 API Key</div><div style="margin-top:10px"><button class="btn sec2" onclick="closeRecogSheet()">关闭</button></div></div>';
     toast("未配置 API Key");return;
   }
   let b64;try{b64=await prepImage(file);}catch(e){box().innerHTML='<div class="card"><div class="empty">图片处理失败：'+esc(e.message)+'</div></div>';return;}
@@ -1788,7 +1797,7 @@ async function analyzeFood(file){
     clearTimeout(timer);let msg=e.message||"未知错误";
     if(e.name==="AbortError")msg="请求超时(60s)：接口响应慢或图片上传慢。可尝试：①切到 Wi-Fi ②在「更多」换用响应更快的模型 ③在接口地址前加 CORS 代理";
     else if(/Failed to fetch/i.test(msg))msg="网络/CORS 跨域被拦截：浏览器无法直接访问该接口，请在「更多」接口地址前加 CORS 代理，或换用允许浏览器直连的兼容服务/本地模型";
-    box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div></div>';
+    box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div><div style="margin-top:10px"><button class="btn sec2" onclick="closeRecogSheet()">关闭</button></div></div>';
   }
 }
 function renderRecog(arr){
@@ -1817,14 +1826,15 @@ function renderRecog(arr){
       </div>
       ${x.isLabel?'<div class="hint" style="margin-top:6px">已按每100g录入，加入后在「今日吃了啥」点 ✎ 改克数即可自动重算。</div>':''}
     </div>`).join("");
-  document.getElementById("recogBox").innerHTML='<div class="card"><h2>识别结果（可修改后加入）</h2>'+rows+
+  document.getElementById("recogTitle").textContent="识别结果（可修改后加入）";
+  document.getElementById("recogInner").innerHTML='<div class="card"><h2>识别结果（可修改后加入）</h2>'+rows+
     '<div style="display:flex;gap:10px;margin-top:6px"><button class="btn" style="flex:1" onclick="confirmRecog()">✓ 加入饮食记录</button><button class="btn sec2" style="flex:1" onclick="cancelRecog()">取消</button></div></div>';
 }
-function cancelRecog(){window.__recogItems=[];document.getElementById("recogBox").innerHTML="";}
+function cancelRecog(){window.__recogItems=[];document.getElementById("recogInner").innerHTML="";document.getElementById("recogSheet").style.display="none";}
 function confirmRecog(){
   let n=0;
   const items=window.__recogItems||[];
-  document.querySelectorAll("#recogBox .recog-item").forEach(el=>{
+  document.querySelectorAll("#recogInner .recog-item").forEach(el=>{
     if(!el.querySelector(".rk").checked)return;
     const i=+el.getAttribute("data-i");const base=items[i]||{};
     const g=f=>el.querySelector('[data-f="'+f+'"]').value;
@@ -1838,7 +1848,7 @@ function confirmRecog(){
     }
     n++;
   });
-  save();renderToday();document.getElementById("recogBox").innerHTML="";toast("已加入 "+n+" 项");
+  save();renderToday();document.getElementById("recogInner").innerHTML="";document.getElementById("recogSheet").style.display="none";toast("已加入 "+n+" 项");
 }
 async function onBodyCam(el){
   const f=el.files&&el.files[0]; if(!f){return;}
@@ -1850,7 +1860,7 @@ async function analyzeScale(file){
   const api=S.api||{};
   const box=()=>document.getElementById("bodyRecogBox");
   if(!api.key){
-    box().innerHTML='<div class="card"><div class="empty">⚠️ 请先在「更多 → 拍照识别」填写 API Key</div></div>';
+    box().innerHTML='<div class="card"><div class="empty">⚠️ 请先在「更多 → 拍照识别」填写 API Key</div><div style="margin-top:10px"><button class="btn sec2" onclick="document.getElementById(\'bodyRecogBox\').innerHTML=\'\'">关闭</button></div></div>';
     toast("未配置 API Key");return;
   }
   let b64;try{b64=await prepImage(file);}catch(e){box().innerHTML='<div class="card"><div class="empty">图片处理失败：'+esc(e.message)+'</div></div>';return;}
@@ -1874,7 +1884,7 @@ async function analyzeScale(file){
     clearTimeout(timer);let msg=e.message||"未知错误";
     if(e.name==="AbortError")msg="请求超时(60s)：接口响应慢或图片上传慢。可尝试：①切到 Wi-Fi ②在「更多」换用响应更快的模型 ③在接口地址前加 CORS 代理";
     else if(/Failed to fetch/i.test(msg))msg="网络/CORS 跨域被拦截：浏览器无法直接访问该接口，请在「更多」接口地址前加 CORS 代理，或换用允许浏览器直连的兼容服务/本地模型";
-    box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div></div>';
+    box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div><div style="margin-top:10px"><button class="btn sec2" onclick="document.getElementById(\'bodyRecogBox\').innerHTML=\'\'">关闭</button></div></div>';
   }
 }
 function recordBodyFromObj(obj){
