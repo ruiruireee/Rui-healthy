@@ -889,6 +889,7 @@ function normalize(d){
   s.diet.forEach(it=>{
     const sp=splitUnit(it.unit);
     if(sp){ it.qty=(+it.qty||1)*sp.num; it.unit=sp.rest; }
+    if(!it.src)it.src="manual";   // 老数据未标记来源，默认 manual（避免误进「拍照识别」列表）
   });
   s.customEx.forEach(it=>{const sp=splitUnit(it.unit);if(sp){it.qty=(+it.qty||1)*sp.num;it.unit=sp.rest;}});
   // 自检：若蛋白+碳水的热量已超出总热量目标（说明宏量比例是为更高热量设计的），按比例重分配
@@ -1292,7 +1293,7 @@ function confirmAddModal(){
         f=+document.getElementById("mF").value||0;
   if(!name&&!k){toast("填个名称或热量");return;}
   if(amtRaw===""||isNaN(amt)){toast("先填重量/数量");return;}
-  S.diet.push({id:uid(),date:today(),name:name||"未命名",unit,qty:amt,k,p,c,f});
+  S.diet.push({id:uid(),date:today(),name:name||"未命名",unit,qty:amt,k,p,c,f,src:mFromRecog?"recog":"manual"});
   if(mFromRecog){   // 拍照识别添加 → 记入「已拍过」，下次一键加，份量沿用本次
     S.recog=S.recog.filter(r=>r.name!==name);
     S.recog.unshift({name, qty:amt, unit, k, p, c, f});
@@ -1322,7 +1323,7 @@ function renderRecogHistory(){
 }
 function addFromRecog(i){
   const x=S.recog[i]; if(!x)return;
-  S.diet.push({id:uid(),date:today(),name:x.name,unit:x.unit,qty:x.qty,k:x.k,p:x.p,c:x.c,f:x.f});
+  S.diet.push({id:uid(),date:today(),name:x.name,unit:x.unit,qty:x.qty,k:x.k,p:x.p,c:x.c,f:x.f,src:"recog"});
   save(); renderToday(); toast("已添加 "+x.name);
   // 把这项挪到最前，方便下次再点
   S.recog.splice(i,1); S.recog.unshift(x); save(); renderRecogHistory();
@@ -1976,6 +1977,33 @@ function toggleKey(){
 
 /* ---------- 分享今日成果图 ---------- */
 function rrect(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath();}
+// 跨域安全加载图片：先尝试 crossOrigin，失败则 fetch 转 dataURL（同源 = 不会污染画布）。返回 null 表示加载失败。带超时兜底，绝不卡住调用方。
+async function loadImageSafe(url,timeoutMs=6000){
+  const timeout=new Promise(res=>setTimeout(()=>res("__timeout__"),timeoutMs));
+  const tryCors=new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin="anonymous";
+    img.onload=()=>resolve(img);
+    img.onerror=reject;
+    img.src=url;
+  });
+  const r1=await Promise.race([tryCors,timeout]);
+  if(r1 && r1!=="__timeout__")return r1;
+  try{
+    const fr=await fetch(url,{mode:"cors"});
+    const b=await fr.blob();
+    const dataUrl=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b);});
+    const tryData=new Promise((resolve,reject)=>{
+      const img=new Image();
+      img.onload=()=>resolve(img);
+      img.onerror=reject;
+      img.src=dataUrl;
+    });
+    const r2=await Promise.race([tryData,timeout]);
+    if(r2 && r2!=="__timeout__")return r2;
+    return null;
+  }catch(__){ return null; }
+}
 function drawBrand(x,cx,cy,P){
   x.save();const g=x.createLinearGradient(cx,cy,cx+70,cy+40);
   g.addColorStop(0,P.brand[0]);g.addColorStop(1,P.brand[1]);
@@ -2024,7 +2052,7 @@ function shareTheme(){
     card:"rgba(255,255,255,.05)",barBg:"rgba(255,255,255,.08)",line:"rgba(255,255,255,.10)"
   };
 }
-function openShareCard(){
+async function openShareCard(){
   const W=1080,H=1640;
   const cv=document.createElement("canvas");cv.width=W;cv.height=H;
   const x=cv.getContext("2d");
@@ -2075,19 +2103,46 @@ function openShareCard(){
     y2=drawWrapped(x,"共 "+cnt+" 项运动 · 累计 "+mins+" 分钟",60,y2,W-120,40,F,P.sub)+16;
     tw.forEach(w=>{y2=drawWrapped(x,"• "+w.name+"　"+w.min+" 分钟 · "+w.kcal+" kcal",60,y2,W-120,40,"400 28px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.text)+8;});
   }
-  // 关于 睿健康（简洁版 A）
-  let y3=secTitle(x,"关于 睿健康",60,y2+34,P,P.title);
-  y3=drawWrapped(x,"拍照记录饮食与运动，自动算出热量和三大营养素，再给出贴合目标的每日建议。",60,y3+8,W-120,40,"400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.sub);
+  // 今日拍照识别（src==='recog' 的当日食物，含份量与营养素），填满下半部分，避免底部太空
+  const photoItems=S.diet.filter(t=>t.date===today() && t.src==='recog');
+  let yp=secTitle(x,"📸 今日拍照识别",60,y2+34,P,P.title);
+  if(photoItems.length===0){
+    yp=drawWrapped(x,"今天还没用拍照识别记录哦～打开相机一键识别食物热量",60,yp+8,W-120,42,F,P.sub)+12;
+  }else{
+    yp=drawWrapped(x,"共 " +photoItems.length+" 项 · 拍照识别，自动算热量",60,yp+8,W-120,40,F,P.sub)+12;
+    const show=photoItems.slice(0,8);
+    show.forEach(it=>{
+      const portion=(it.unit==='g')?(Math.round(it.qty)+"g"):((it.qty%1===0?it.qty:it.qty.toFixed(1))+(it.unit||"份"));
+      const line="• "+it.name+" · "+portion+" · "+it.k+" kcal · 蛋"+Math.round(it.p)+" 碳"+Math.round(it.c)+" 脂"+Math.round(it.f);
+      yp=drawWrapped(x,line,60,yp+10,W-120,42,"400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.text)+6;
+    });
+    if(photoItems.length>8){yp=drawWrapped(x,"等共 "+photoItems.length+" 项",60,yp+6,W-120,40,F,P.sub)+8;}
+  }
+  // 关于 睿健康（精简版）
+  let y3=secTitle(x,"关于 睿健康",60,yp+24,P,P.title);
+  y3=drawWrapped(x,"拍照记录饮食与运动，自动算出热量和营养素，贴合目标的每日建议。",60,y3+8,W-120,40,"400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif",P.sub);
   const tags=["拍照识别","目标管理","自动营养"];let tx=60,ty=y3+22;
   tags.forEach(t=>{x.font="500 26px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";const tw=x.measureText(t).width;const padX=22,boxW=tw+padX*2,boxH=50;x.fillStyle=P.card;rrect(x,tx,ty,boxW,boxH,25);x.fill();x.fillStyle=P.sub;x.textAlign="left";x.fillText(t,tx+padX,ty+33);tx+=boxW+14;});
-  // 页脚
-  x.fillStyle=P.card;rrect(x,60,H-150,W-120,90,20);x.fill();
-  x.textAlign="left";x.fillStyle=P.title;x.font="800 40px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-  x.fillText("睿健康",92,H-92);
+  // 页脚：品牌 + slogan + 右侧真实二维码（扫码打开 App）
+  const footY=H-180, footH=160;
+  x.fillStyle=P.card;rrect(x,60,footY,W-120,footH,24);x.fill();
+  x.textAlign="left";x.fillStyle=P.title;x.font="800 44px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.fillText("睿健康",92,footY+62);
   x.fillStyle=P.sub;x.font="400 30px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-  x.fillText("按照自己的节奏来",270,H-90);
-  x.textAlign="right";x.fillStyle=P.sub;x.font="400 26px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
-  x.fillText("健康打卡 · 今天也要好好吃饭",W-92,H-90);
+  x.fillText("按照自己的节奏来",92,footY+104);
+  x.font="400 26px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";
+  x.fillText("健康打卡 · 今天也要好好吃饭",92,footY+138);
+  const qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fruiruireee.github.io%2FRui-healthy%2F&margin=2&color=0c1512&bgcolor=ffffff";
+  const qrImg=await loadImageSafe(qrUrl);
+  const qrSize=120, qrX=W-60-qrSize-20, qrY=footY+10;
+  x.fillStyle="#ffffff";rrect(x,qrX-10,qrY-10,qrSize+20,qrSize+20,16);x.fill();
+  if(qrImg){x.drawImage(qrImg,qrX,qrY,qrSize,qrSize);}
+  else{
+    x.fillStyle="#e5e7eb";x.fillRect(qrX,qrY,qrSize,qrSize);
+    x.fillStyle="#9ca3af";x.font="500 22px -apple-system,'PingFang SC',sans-serif";x.textAlign="center";x.fillText("二维码",qrX+qrSize/2,qrY+qrSize/2+8);
+  }
+  x.fillStyle=P.sub;x.font="400 22px -apple-system,'PingFang SC','Microsoft YaHei',sans-serif";x.textAlign="center";
+  x.fillText("扫码打开睿健康",qrX+qrSize/2,qrY+qrSize+28);
   document.getElementById("shareImg").src=cv.toDataURL("image/png");
   document.getElementById("shareModal").classList.add("show");
 }
