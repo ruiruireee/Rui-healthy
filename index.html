@@ -519,21 +519,6 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
       <div id="todayWorkout"></div>
     </div>
     <div class="card">
-      <div class="wk-hero">
-        <div class="wk-level" id="wkLevel">🐣</div>
-        <div><div class="wk-title" id="wkTitle">新手村</div><div class="wk-sub" id="wkSub">迈出第一步！</div></div>
-      </div>
-      <div class="wk-stats">
-        <div class="wk-stat"><div class="v" id="wkStreak">0</div><div class="l">🔥 连续打卡<br>天</div></div>
-        <div class="wk-stat"><div class="v" id="wkTotal">0</div><div class="l">累计消耗<br>kcal</div></div>
-        <div class="wk-stat"><div class="v" id="wkWeek">0</div><div class="l">本周运动<br>天</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>🏅 运动成就</h2>
-      <div class="badges" id="wkBadges"></div>
-    </div>
-    <div class="card">
       <h2>选择运动</h2>
       <div class="chips" id="exChips"></div>
       <div class="hint" style="margin-top:10px">没有合适的？<span class="chip" onclick="document.getElementById('customExCard').scrollIntoView({behavior:'smooth',block:'center'})">＋ 自定义运动</span></div>
@@ -549,6 +534,21 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
         <div class="tile-v" style="color:var(--accent2)" id="exKcal">0 <small>kcal</small></div>
       </div>
       <button class="btn" style="margin-top:12px" onclick="addWorkout()">记录这次训练</button>
+    </div>
+    <div class="card">
+      <div class="wk-hero">
+        <div class="wk-level" id="wkLevel">🐣</div>
+        <div><div class="wk-title" id="wkTitle">新手村</div><div class="wk-sub" id="wkSub">迈出第一步！</div></div>
+      </div>
+      <div class="wk-stats">
+        <div class="wk-stat"><div class="v" id="wkStreak">0</div><div class="l">🔥 连续打卡<br>天</div></div>
+        <div class="wk-stat"><div class="v" id="wkTotal">0</div><div class="l">累计消耗<br>kcal</div></div>
+        <div class="wk-stat"><div class="v" id="wkWeek">0</div><div class="l">本周运动<br>天</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>🏅 运动成就</h2>
+      <div class="badges" id="wkBadges"></div>
     </div>
     <div class="card" id="customExCard">
       <h2>我的自定义运动</h2>
