@@ -38,12 +38,10 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:16px;
     backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 8px 30px rgba(0,0,0,.28)}
   .card h2{font-size:13px;margin:0 0 12px;color:var(--sub);font-weight:600;letter-spacing:.6px}
-  .card.collapsible > h2{cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;margin-bottom:12px}
-  .card.collapsible.collapsed > h2{margin-bottom:0}
-  .card.collapsible > h2 .chev{transition:transform .2s;font-size:12px;color:var(--sub);flex:none;margin-left:8px}
-  .card.collapsible.collapsed > h2 .chev{transform:rotate(-90deg)}
-  .card.collapsible.collapsed .card-body{display:none}
   .card-body{overflow:hidden}
+  .fold-toggle{display:block;margin:12px auto 0;background:transparent;border:1px solid var(--line);
+    color:var(--sub);font-size:13px;border-radius:20px;padding:7px 18px;cursor:pointer;transition:color .15s,border-color .15s}
+  .fold-toggle:hover{color:var(--accent);border-color:var(--accent)}
   .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
   .goal-form{display:flex;flex-direction:column;gap:14px}
   .goal-field{display:flex;flex-direction:column;gap:4px}
@@ -506,15 +504,15 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
 
   <!-- 吃了啥 -->
   <section class="sec" id="s-diet">
-    <div class="card collapsible collapsed" id="recogHistCard">
-      <h2 onclick="toggleCard('recogHistCard')">已拍过 · 点一下一键加回 <span class="chev">▾</span></h2>
+    <div class="card" id="recogHistCard">
+      <h2>已拍过 · 点一下一键加回</h2>
       <div class="card-body">
         <div class="hint" style="margin-bottom:8px">拍照识别添加过的食物会自动留在这里，份量沿用上次，不用重拍。</div>
         <div class="chips" id="recogHistChips"></div>
       </div>
     </div>
-    <div class="card collapsible collapsed" id="presetCard">
-      <h2 onclick="toggleCard('presetCard')">常用食物 · 点一下填份量 <span class="chev">▾</span></h2>
+    <div class="card" id="presetCard">
+      <h2>常用食物 · 点一下填份量</h2>
       <div class="card-body">
         <div class="hint" style="margin-bottom:8px">点任意食物，会弹出窗口让你填重量/数量，确认后再加入。</div>
         <div class="chips" id="presetChips"></div>
@@ -1308,6 +1306,7 @@ function renderPresets(){
     `<span class="chip" onclick="openAddModal(${i})">${x.n} · ${x.k}</span>`).join("");
   const pc=document.getElementById("presetChips"); if(pc)pc.innerHTML=chips;
   const hpc=document.getElementById("homePresets"); if(hpc)hpc.innerHTML=chips;
+  applyFold("presetChips"); applyFold("homePresets");
 }
 function renderRecogHistory(){
   const card=document.getElementById("recogHistCard");
@@ -1320,6 +1319,7 @@ function renderRecogHistory(){
     const amt=(x.qty%1===0)?x.qty:x.qty.toFixed(1);
     return `<span class="chip" onclick="addFromRecog(${i})">${esc(x.name)} · ${amt}${unit} · ${x.k}kcal ✕</span>`;
   }).join("");
+  applyFold("recogHistChips");
 }
 function addFromRecog(i){
   const x=S.recog[i]; if(!x)return;
@@ -2159,30 +2159,38 @@ async function doShare(){
   }catch(e){saveShare();}
 }
 
-/* 折叠「已拍过 / 常用食物」卡片，状态持久化，避免页面过长把「今日吃了啥」挤到下面 */
-function applyFold(){
-  try{
-    const f=JSON.parse(localStorage.getItem("fitdiet_fold")||"{}");
-    ["recogHistCard","presetCard"].forEach(id=>{
-      const c=document.getElementById(id); if(!c)return;
-      if(f[id]===true)c.classList.add("collapsed");
-      else if(f[id]===false)c.classList.remove("collapsed");
-    });
-  }catch(e){}
-}
-function toggleCard(id){
-  const c=document.getElementById(id); if(!c)return;
-  const collapsed=c.classList.toggle("collapsed");
-  try{
-    const f=JSON.parse(localStorage.getItem("fitdiet_fold")||"{}");
-    f[id]=collapsed; localStorage.setItem("fitdiet_fold",JSON.stringify(f));
-  }catch(e){}
+/* 「已拍过 / 常用食物」列表：默认显示前 5 项，超出部分折叠，点击展开/收起（状态持久化） */
+const FOLD_LIMIT=5;
+function applyFold(boxId){
+  const box=document.getElementById(boxId); if(!box)return;
+  const items=Array.from(box.children);
+  const total=items.length;
+  let st={}; try{ st=JSON.parse(localStorage.getItem("fitdiet_fold")||"{}"); }catch(e){}
+  const expanded=st[boxId]===true;            // true=展开（显示全部）
+  if(total<=FOLD_LIMIT){                        // 不足 5 项：全部显示，移除折叠按钮
+    items.forEach(it=>it.style.display="");
+    const old=box.parentNode.querySelector(".fold-toggle"); if(old)old.remove();
+    return;
+  }
+  items.forEach((it,i)=>{ it.style.display=(i<FOLD_LIMIT||expanded)?"":"none"; });
+  let t=box.parentNode.querySelector(".fold-toggle");
+  if(!t){
+    t=document.createElement("button"); t.className="fold-toggle"; t.type="button";
+    t.onclick=()=>{
+      let s={}; try{ s=JSON.parse(localStorage.getItem("fitdiet_fold")||"{}"); }catch(e){}
+      s[boxId]=!(s[boxId]===true); localStorage.setItem("fitdiet_fold",JSON.stringify(s));
+      applyFold(boxId);
+    };
+    box.parentNode.appendChild(t);
+  }
+  t.textContent = expanded ? "收起 ▴" : `展开全部 ${total} 项 ▾`;
 }
 
 /* init */
 initTheme();
 document.getElementById("todayLabel").textContent=new Date().toLocaleDateString("zh-CN",{month:"long",day:"numeric",weekday:"short"});
-renderPresets();renderToday();applyFold();
+renderPresets();renderToday();
+applyFold("recogHistChips"); applyFold("presetChips"); applyFold("homePresets");
 </script>
 <div id="shareModal">
   <img id="shareImg" alt="今日成果">
