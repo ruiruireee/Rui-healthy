@@ -2046,14 +2046,33 @@ async function analyzeScale(file){
     box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div><div style="margin-top:10px"><button class="btn sec2" onclick="document.getElementById(\'bodyRecogBox\').innerHTML=\'\'">关闭</button></div></div>';
   }
 }
+function _toNum(v){
+  if(v==null||v==="")return null;
+  if(typeof v==="number")return isFinite(v)?v:null;
+  if(typeof v==="string"){const m=v.replace(/[^0-9.\-]/g,"");if(!m)return null;const n=parseFloat(m);return isFinite(n)?n:null;}
+  return null;
+}
+function _pick(obj,words,exclude){
+  const keys=Object.keys(obj);
+  for(const pass of [true,false]){
+    for(const k of keys){
+      const lk=k.toLowerCase();
+      if(words.some(w=>lk.includes(w.toLowerCase()))){
+        const bad=exclude&&exclude.some(e=>lk.includes(e.toLowerCase()));
+        if(pass?!bad:bad){const v=_toNum(obj[k]);if(v!=null)return v;}
+      }
+    }
+  }
+  return null;
+}
 function recordBodyFromObj(obj){
   const w=parseFloat(obj.weight_kg);
   if(!w){toast("未识别到体重");return;}
   const t=today();
   const idx=S.body.findIndex(x=>x.date===t);
   const stickers=idx>=0?(S.body[idx].stickers||[]):[];
-  const _muscleV=obj.muscle_percent??obj.musclePct??obj.muscle_rate??obj.muscle??obj.skeletal_muscle_percent;
-  const _waterV=obj.water_percent??obj.water??obj.water_rate??obj.body_water_percent??obj.moisture_percent??obj.moisture??obj.body_water;
+  const _muscleV=_pick(obj,["muscle","肌肉","肌"],["mass","kg","骨","bone","量"]);
+  const _waterV=_pick(obj,["water","moisture","水"],["mass","kg","骨","bone"]);
   const rec={
     id:uid(),date:t,weight:w,
     bmi:obj.bmi!=null?+obj.bmi:null,
