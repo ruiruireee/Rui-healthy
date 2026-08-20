@@ -2014,7 +2014,7 @@ async function analyzeScale(file){
   }
   let b64;try{b64=await prepImage(file);}catch(e){box().innerHTML='<div class="card"><div class="empty">图片处理失败：'+esc(e.message)+'</div></div>';return;}
   const url=api.base.replace(/\/+$/,"")+"/chat/completions";
-  const sys='你是智能体脂秤读数助手。用户发来一张体重秤/体脂秤的屏幕截图（可能是手机App截图或秤的LED屏照片）。请识别并返回一个 JSON 对象，字段如下：{"weight_kg":60.65,"bmi":22.5,"body_fat_percent":30.8,"muscle_percent":39.1,"water_percent":50.6,"bone_kg":2.5,"bmr_kcal":1242,"protein_percent":13.8,"body_age":37}。weight_kg 必填（通常为 kg）。其他字段若图中有则填，没有则填 null 或不填。只返回 JSON 对象，不要任何解释文字、不要 markdown 代码块。';
+  const sys='你是智能体脂秤读数助手。用户发来一张体重秤/体脂秤的屏幕截图（手机App截图或秤的LED屏照片）。请识别并**严格**返回一个 JSON 对象，所有字段用以下确切 key：{"weight_kg":60.65,"bmi":22.5,"body_fat_percent":30.8,"muscle_percent":39.1,"water_percent":50.6,"bone_kg":2.5,"bmr_kcal":1242,"protein_percent":13.8,"body_age":37}。字段含义：weight_kg=体重(kg, 必填)；bmi=BMI(必填)；body_fat_percent=体脂率(%)；muscle_percent=肌肉率(%, **必填**，秤上可能标"肌肉率/肌肉量(%/百分比)/骨骼肌率"，是百分比不是kg)；water_percent=水分(%, **必填**，秤上可能标"水分/体水分/含水量/Water")；bone_kg=骨量(kg)；bmr_kcal=基础代谢(kcal)；protein_percent=蛋白率(%)；body_age=身体年龄(岁)。所有数字字段若图中能看清就填，看不清或没有则填 null。**只返回纯 JSON 对象**，不要任何解释文字、不要 markdown 代码块、不要换行注释。';
   const body={model:api.model||"gpt-4o-mini",messages:[
     {role:"system",content:sys},
     {role:"user",content:[{type:"text",text:"读取这张体重秤/体脂秤截图中的体重、体脂率、基础代谢等数据。"},{type:"image_url",image_url:{url:b64}}]}
@@ -2042,13 +2042,15 @@ function recordBodyFromObj(obj){
   const t=today();
   const idx=S.body.findIndex(x=>x.date===t);
   const stickers=idx>=0?(S.body[idx].stickers||[]):[];
+  const _muscleV=obj.muscle_percent??obj.musclePct??obj.muscle_rate??obj.muscle??obj.skeletal_muscle_percent;
+  const _waterV=obj.water_percent??obj.water??obj.water_rate??obj.body_water_percent??obj.moisture_percent??obj.moisture??obj.body_water;
   const rec={
     id:uid(),date:t,weight:w,
     bmi:obj.bmi!=null?+obj.bmi:null,
     fat:obj.body_fat_percent!=null?+obj.body_fat_percent:null,
     bmr:obj.bmr_kcal!=null?+obj.bmr_kcal:null,
-    muscle:obj.muscle_percent!=null?+obj.muscle_percent:null,
-    water:obj.water_percent!=null?+obj.water_percent:null,
+    muscle:_muscleV!=null?+_muscleV:null,
+    water:_waterV!=null?+_waterV:null,
     bone:obj.bone_kg!=null?+obj.bone_kg:null,
     protein:obj.protein_percent!=null?+obj.protein_percent:null,
     bodyAge:obj.body_age!=null?+obj.body_age:null,
