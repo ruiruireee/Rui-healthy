@@ -773,6 +773,16 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
       <label>模型</label><input id="aModel" placeholder="glm-4v-flash">
       <button class="btn" style="margin-top:12px" onclick="saveApi()">保存</button>
     </div>
+    <div class="card">
+      <h2>数据备份</h2>
+      <div class="hint" style="margin-bottom:10px">把全部数据（吃/运动/体重/目标）导出成 JSON 保存，换手机或重装后可导入恢复。重部署前建议先导出。</div>
+      <button class="btn sec2" style="margin-top:4px" onclick="exportData()">📤 下载备份 JSON</button>
+      <button class="btn sec2" style="margin-top:8px" onclick="copyData()">📋 复制 JSON</button>
+      <div style="margin-top:12px"><label>导入 JSON 恢复</label>
+        <input id="importFile" type="file" accept="application/json,.json" style="padding:8px" onchange="importData(event)">
+      </div>
+      <div class="hint" style="margin-top:8px;color:var(--danger)">⚠️ 导入会覆盖当前全部数据，请先导出备份。</div>
+    </div>
   </section>
 </div>
 
@@ -2067,6 +2077,46 @@ function saveApi(){
   S.api={key:document.getElementById("aKey").value.trim(),base:document.getElementById("aBase").value.trim()||"https://api.openai.com/v1",model:document.getElementById("aModel").value.trim()||"gpt-4o-mini"};
   save();toast("已保存");
   renderMore();
+}
+function exportData(){
+  try{
+    const data=JSON.stringify(S,null,2);
+    const blob=new Blob([data],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    const d=new Date(),pad=n=>String(n).padStart(2,"0");
+    a.href=url;a.download="ruijiankang-backup-"+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+".json";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    toast("已导出备份");
+  }catch(e){toast("导出失败："+e.message);}
+}
+async function copyData(){
+  const txt=JSON.stringify(S,null,2);
+  try{ await navigator.clipboard.writeText(txt); toast("已复制 JSON，可粘贴发送"); }
+  catch(e){
+    const ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand("copy");toast("已复制 JSON");}catch(_){prompt("复制下面的 JSON：",txt);}
+    document.body.removeChild(ta);
+  }
+}
+function importData(ev){
+  const file=ev.target&&ev.target.files&&ev.target.files[0];
+  if(!file){toast("未选择文件");return;}
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const obj=JSON.parse(r.result);
+      if(typeof obj!=="object"||obj===null||Array.isArray(obj))throw new Error("不是有效的备份(JSON 应是对象)");
+      if(!confirm("导入会覆盖当前全部数据，确定继续？（建议先点「下载备份 JSON」备份）")){ev.target.value="";return;}
+      Object.assign(S, obj);save();renderMore();
+      toast("已导入，正在刷新…");
+      setTimeout(()=>location.reload(),600);
+    }catch(e){toast("导入失败："+e.message);ev.target.value="";}
+  };
+  r.onerror=()=>{toast("读取文件失败");ev.target.value="";};
+  r.readAsText(file);
 }
 function toggleKey(){
   const el=document.getElementById("aKey"),b=el.previousElementSibling;
