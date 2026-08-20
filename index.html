@@ -73,6 +73,7 @@
   input[type="date"]{min-width:0;flex-shrink:1}
   input:focus,select:focus{outline:none;border-color:var(--accent)}
   #gGoalWeight{text-align:center;font-weight:600;font-size:16px;min-height:48px;margin-top:0}
+  .goal-center{text-align:center;font-weight:600;font-size:16px;min-height:48px;margin-top:0}
   input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
   input[type=number]{-moz-appearance:textfield}
   label{font-size:12px;color:var(--sub);display:block;margin-top:10px}
@@ -639,6 +640,16 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
     </div>
 
     <div class="card">
+      <h2>体脂率趋势</h2>
+      <div id="fatChart"></div>
+    </div>
+
+    <div class="card">
+      <h2>肌肉率趋势</h2>
+      <div id="muscleChart"></div>
+    </div>
+
+    <div class="card">
       <h2>历史记录</h2>
       <div id="bodyList"></div>
     </div>
@@ -684,8 +695,19 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
           <input id="gGoalWeight" type="text" inputmode="decimal" placeholder="如 130" oninput="goalCalc()">
         </div>
       </div>
-      <div class="hint" style="margin-top:12px">当前体重约 <b id="curJin">—</b> 斤（取自身体数据）。填好上面两项，自动算出每天该吃多少、赤字多大。</div>
+      <div class="goal-form" style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="goal-field">
+          <label style="text-align:center">目标体脂率（%）</label>
+          <input id="gGoalFat" class="goal-center" type="text" inputmode="decimal" placeholder="如 25" oninput="renderGoalProgress()">
+        </div>
+        <div class="goal-field">
+          <label style="text-align:center">目标肌肉率（%）</label>
+          <input id="gGoalMuscle" class="goal-center" type="text" inputmode="decimal" placeholder="如 32" oninput="renderGoalProgress()">
+        </div>
+      </div>
+      <div class="hint" style="margin-top:12px">当前体重约 <b id="curJin">—</b> 斤（取自身体数据）。填好上面几项，自动算出每天该吃多少、赤字多大，并跟踪身体成分进度。</div>
       <div id="goalOut" style="margin-top:10px"></div>
+      <div id="goalProgress" style="margin-top:14px"></div>
       <button class="btn" style="margin-top:14px" onclick="applyGoal()">应用为每日热量目标</button>
     </div>
 
@@ -698,6 +720,7 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
         <div class="go-m"><div class="go-m-v" id="goCarb">—</div><div class="go-m-l">碳水(g)</div></div>
         <div class="go-m"><div class="go-m-v" id="goFat">—</div><div class="go-m-l">脂肪(g)</div></div>
       </div>
+      <div class="go-comp" id="goComp" style="margin-top:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px;text-align:center"></div>
       <div class="hint" style="margin-top:12px;text-align:center">填好目标并「应用为每日热量目标」后，蛋白质/碳水/脂肪会自动生成。</div>
     </div>
 
@@ -1567,7 +1590,7 @@ function renderBody(){
   else{box.innerHTML=list.slice().reverse().slice(0,30).map(x=>`<div class="row">
     <div><div class="n">${x.weight} kg${x.note?" <span style='font-size:12px;color:var(--sub)'>· "+esc(x.note)+"</span>":""}${(x.stickers&&x.stickers.length)?" <span style='font-size:12px;color:var(--sub)'>"+x.stickers.map(s=>STICKER_EMOJI[s]||"").join("")+"</span>":""}</div><div class="m">${x.date}${x.fat!=null?" · 体脂 "+x.fat+"%":""}${x.bmr?" · 基础代谢 "+x.bmr:""}${x.bodyAge?" · 身体年龄 "+x.bodyAge:""}</div></div>
     <div class="del" onclick="delBody('${x.id}')">✕</div></div>`).join("");}
-  drawWeight();
+  drawWeight();drawFat();drawMuscle();
 }
 function renderMetrics(cur){
   const set=(id,v)=>{
@@ -1633,30 +1656,37 @@ function loadSampleBody(){
   save();renderBody();toast("已载入今早空腹数据");
 }
 function delBody(id){S.body=S.body.filter(x=>x.id!==id);save();renderBody();}
-function drawWeight(){
-  const pts=S.body.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(x=>({d:x.date,v:x.weight}));
-  const box=document.getElementById("weightChart");
-  if(pts.length<2){box.innerHTML='<div class="empty">至少记录 2 次体重才能画趋势</div>';return;}
+function drawSeries(boxId, field, color, label, unit){
+  const pts=S.body.slice().sort((a,b)=>a.date.localeCompare(b.date)).filter(x=>x[field]!=null).map(x=>({d:x.date,v:x[field]}));
+  const box=document.getElementById(boxId);
+  if(pts.length<2){box.innerHTML='<div class="empty">至少记录 2 次'+label+'才能画趋势</div>';return;}
   const W=520,H=180,pad=28;
-  const vs=pts.map(p=>p.v),min=Math.min(...vs)-1,max=Math.max(...vs)+1;
+  const vs=pts.map(p=>p.v),lo=Math.min(...vs),hi=Math.max(...vs),span=(hi-lo)||1;
+  const min=lo-span*0.15,max=hi+span*0.15;
   const xs=i=>pad+(W-pad*2)*i/(pts.length-1);
   const ys=v=>H-pad-(H-pad*2)*(v-min)/(max-min||1);
   let path="",dots="";
-  pts.forEach((p,i)=>{const x=xs(i),y=ys(p.v);path+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="var(--accent)"/>`;});
+  pts.forEach((p,i)=>{const x=xs(i),y=ys(p.v);path+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1)+" ";dots+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${color}"/>`;});
   const lbl1=`<text x="${pad}" y="14">${max.toFixed(1)}</text>`,lbl2=`<text x="${pad}" y="${H-6}">${min.toFixed(1)}</text>`;
   const lblx=`<text x="${W-pad}" y="${H-6}" text-anchor="end">${pts[pts.length-1].d.slice(5)}</text>`;
   box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="100%" preserveAspectRatio="none">
-    <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+    <path d="${path}" fill="none" stroke="${color}" stroke-width="2.5"/>
     ${dots}${lbl1}${lbl2}${lblx}</svg>`;
 }
+function drawWeight(){drawSeries("weightChart","weight","var(--accent)","体重","kg");}
+function drawFat(){drawSeries("fatChart","fat","var(--accent)","体脂率","%");}
+function drawMuscle(){drawSeries("muscleChart","muscle","var(--accent2)","肌肉率","%");}
 
 /* ---------- 更多 ---------- */
 function renderGoal(){
   document.getElementById("gGoalDate").value=S.goals.goalDate||"";
   document.getElementById("gGoalWeight").value=S.goals.goalWeightJin||"";
+  document.getElementById("gGoalFat").value=S.goals.goalFat!=null?S.goals.goalFat:"";
+  document.getElementById("gGoalMuscle").value=S.goals.goalMuscle!=null?S.goals.goalMuscle:"";
   updateDateDisplay();
   goalCalc();
   renderGoalOverview();
+  renderGoalProgress();
   renderCalendar();
 }
 function renderGoalOverview(){
@@ -1667,6 +1697,17 @@ function renderGoalOverview(){
   const pEl=document.getElementById("goPro");if(pEl)pEl.textContent=g.pro?g.pro:"—";
   const cEl=document.getElementById("goCarb");if(cEl)cEl.textContent=g.carb?g.carb:"—";
   const fEl=document.getElementById("goFat");if(fEl)fEl.textContent=g.fat?g.fat:"—";
+  const comp=document.getElementById("goComp");
+  if(comp){
+    const cur=lastBody();
+    const fatNow=cur&&cur.fat!=null?cur.fat.toFixed(1):"—";
+    const fatGoal=g.goalFat!=null&&g.goalFat!==""?g.goalFat:"—";
+    const musNow=cur&&cur.muscle!=null?cur.muscle.toFixed(1):"—";
+    const musGoal=g.goalMuscle!=null&&g.goalMuscle!==""?g.goalMuscle:"—";
+    comp.innerHTML=
+      `<div class="go-m"><div class="go-m-v" style="color:var(--accent)">${fatNow}</div><div class="go-m-l">当前体脂 %（目标 ${fatGoal}）</div></div>`+
+      `<div class="go-m"><div class="go-m-v" style="color:var(--accent2)">${musNow}</div><div class="go-m-l">当前肌肉 %（目标 ${musGoal}）</div></div>`;
+  }
 }
 function updateDateDisplay(){
   const sp=document.getElementById("dateDisplay");const inp=document.getElementById("gGoalDate");
@@ -1676,6 +1717,55 @@ function updateDateDisplay(){
   const d=new Date(v+"T00:00:00");
   sp.textContent=d.toLocaleDateString("zh-CN",{year:"numeric",month:"long",day:"numeric"});
   sp.classList.remove("placeholder");
+}
+// 目标进度：体重/体脂率(越低越好) + 肌肉率(越高越好)，结合最新身体数据跟踪
+function renderGoalProgress(){
+  const box=document.getElementById("goalProgress"); if(!box)return;
+  const cur=lastBody();
+  const gw=document.getElementById("gGoalWeight");
+  const gf=document.getElementById("gGoalFat");
+  const gm=document.getElementById("gGoalMuscle");
+  const wJin=gw&&gw.value?+gw.value:null;
+  const fatT=gf&&gf.value!==""?+gf.value:null;
+  const musT=gm&&gm.value!==""?+gm.value:null;
+  const targets=[];
+  if(wJin)targets.push({name:"体重",now:cur?cur.weight*2:null,tgt:wJin,unit:"斤",lowerBetter:true});
+  if(fatT!=null)targets.push({name:"体脂率",now:cur?cur.fat:null,tgt:fatT,unit:"%",lowerBetter:true});
+  if(musT!=null)targets.push({name:"肌肉率",now:cur?cur.muscle:null,tgt:musT,unit:"%",lowerBetter:false});
+  if(!targets.length){box.innerHTML='<div class="empty" style="padding:8px 0">填好目标（体重 / 体脂率 / 肌肉率），这里会显示达成进度</div>';return;}
+  const rows=targets.map(t=>{
+    let pct="—",nowTxt="—",deltaTxt="",state="";
+    if(t.now!=null&&!isNaN(t.now)){
+      nowTxt=t.now.toFixed(1)+t.unit;
+      const diff=t.now-t.tgt;
+      if(t.lowerBetter){
+        if(t.now<=t.tgt){pct=100;deltaTxt="已达目标 🎉";state="ok";}
+        else{
+          const span=Math.abs(diff);pct=Math.max(0,Math.min(100,Math.round((1-span/Math.max(span,1))*100)));
+          deltaTxt="还差 "+diff.toFixed(1)+t.unit;
+        }
+      }else{
+        if(t.now>=t.tgt){pct=100;deltaTxt="已达目标 🎉";state="ok";}
+        else{
+          const span=Math.abs(diff);pct=Math.max(0,Math.min(100,Math.round((t.now/Math.max(t.tgt,0.01))*100)));
+          deltaTxt="还差 "+Math.abs(diff).toFixed(1)+t.unit;
+        }
+      }
+    }
+    const pctTxt=(pct==="—")?"—":pct+"%";
+    const barColor=state==="ok"?"var(--accent2)":"var(--accent)";
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:var(--txt);font-weight:700">${t.name}</span>
+        <span style="color:var(--sub)">当前 ${nowTxt} → 目标 ${t.tgt}${t.unit}${deltaTxt?(" · "+deltaTxt):""}</span>
+      </div>
+      <div style="height:10px;background:rgba(255,255,255,.08);border-radius:6px;overflow:hidden">
+        <div style="height:100%;width:${pct==="—"?"0":pct}%;background:${barColor};border-radius:6px;transition:width .3s"></div>
+      </div>
+      <div style="text-align:right;font-size:12px;color:var(--sub);margin-top:3px">${pctTxt}</div>
+    </div>`;
+  }).join("");
+  box.innerHTML='<div style="font-size:13px;color:var(--sub);margin-bottom:10px;font-weight:600">🎯 目标进度（取自最新身体数据）</div>'+rows;
 }
 function renderMore(){
   document.getElementById("aKey").value=S.api.key;
@@ -1764,6 +1854,7 @@ function goalCalc(){
     h+='<div class="verdict ok">✅ 速度安全。建议每日摄入 <b>'+intake+' kcal</b>（TDEE '+tdee+' − 赤字 '+needDef+'），其中蛋白 '+m.pro+'g·碳水 '+m.carb+'g·脂肪 '+m.fat+'g。点下方按钮即可设为每日热量目标。</div>';
   }
   out.innerHTML=h;
+  renderGoalProgress();
 }
 function applyGoal(){
   const dateV=document.getElementById("gGoalDate").value;
@@ -1781,6 +1872,10 @@ function applyGoal(){
   const intake=tdee-def;
   const m=distributeMacros(intake);
   S.goals.goalDate=dateV; S.goals.goalWeightJin=tJin;
+  const gf=document.getElementById("gGoalFat").value;
+  const gm=document.getElementById("gGoalMuscle").value;
+  S.goals.goalFat=gf!==""?+gf:null;
+  S.goals.goalMuscle=gm!==""?+gm:null;
   S.goals.kcal=intake; S.goals.pro=m.pro; S.goals.carb=m.carb; S.goals.fat=m.fat;
   save();renderToday();renderGoal();toast("已设为每日 "+intake+" kcal（蛋白"+m.pro+"g·碳水"+m.carb+"g·脂肪"+m.fat+"g）");
 }
