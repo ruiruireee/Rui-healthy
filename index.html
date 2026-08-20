@@ -739,15 +739,15 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
     </div>
     <div class="card">
       <h2>拍照识别（AI 视觉）</h2>
-      <div class="hint" style="margin-bottom:8px">识别需调用多模态视觉 API。密钥仅存本机，不会发往该 API 以外的任何地方。注意：部分服务（含官方 OpenAI）默认禁止浏览器跨域(CORS)调用，若报错可在接口地址前加 CORS 代理，或改用允许浏览器请求的兼容服务/本地模型。</div>
+      <div class="hint" style="margin-bottom:8px">识别需调用多模态视觉 API。密钥仅存本机，不会发往该 API 以外的任何地方。<b>推荐用智谱 GLM（接口地址填 https://open.bigmodel.cn/api/paas/v4，模型填 glm-4v-flash）</b>：该接口允许浏览器直连（无需 CORS 代理），且 glm-4v-flash 比 glm-4v 快很多，不容易超时。若用官方 OpenAI 等禁止跨域的服务，需在接口地址前加 CORS 代理才能从浏览器调用。</div>
       <label>API Key</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input id="aKey" type="password" placeholder="sk-..." style="margin-top:0;flex:1">
         <button class="btn sec2 sm" type="button" onclick="toggleKey()" style="margin-top:0;width:auto">显示</button>
       </div>
       <div id="apiStatus" class="hint" style="margin-top:8px"></div>
-      <label>接口地址（OpenAI 兼容）</label><input id="aBase" placeholder="https://api.openai.com/v1">
-      <label>模型</label><input id="aModel" placeholder="gpt-4o-mini">
+      <label>接口地址（OpenAI 兼容）</label><input id="aBase" placeholder="https://open.bigmodel.cn/api/paas/v4">
+      <label>模型</label><input id="aModel" placeholder="glm-4v-flash">
       <button class="btn" style="margin-top:12px" onclick="saveApi()">保存</button>
     </div>
   </section>
@@ -1810,7 +1810,7 @@ function prepImage(file){
       const img=new Image();
       img.onerror=()=>rej(new Error("图片解码失败"));
       img.onload=()=>{
-        const max=960;let w=img.width,h=img.height;
+        const max=720;let w=img.width,h=img.height;
         if(w>max||h>max){const s=Math.min(max/w,max/h);w=Math.round(w*s);h=Math.round(h*s);}
         const c=document.createElement("canvas");c.width=w;c.height=h;
         c.getContext("2d").drawImage(img,0,0,w,h);
@@ -1835,7 +1835,7 @@ async function analyzeFood(file){
     {role:"system",content:sys},
     {role:"user",content:[{type:"text",text:"识别这张照片：若是真实食物请估热量；若是包装食品的营养成分表请读表（每100g，能量kJ换算kcal）。"},{type:"image_url",image_url:{url:b64}}]}
   ],max_tokens:900,temperature:0.2};
-  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),60000);
+  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),120000);
   try{
     const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+api.key},body:JSON.stringify(body),signal:ctrl.signal});
     clearTimeout(timer);
@@ -1847,7 +1847,7 @@ async function analyzeFood(file){
     renderRecog(arr);
   }catch(e){
     clearTimeout(timer);let msg=e.message||"未知错误";
-    if(e.name==="AbortError")msg="请求超时(60s)：接口响应慢或图片上传慢。可尝试：①切到 Wi-Fi ②在「更多」换用响应更快的模型 ③在接口地址前加 CORS 代理";
+    if(e.name==="AbortError")msg="请求超时(120s)：接口响应太慢。建议：①在「更多」把模型改成 glm-4v-flash（比 glm-4v 快很多）②切到 Wi-Fi/好网络 ③拍小一点的图";
     else if(/Failed to fetch/i.test(msg))msg="网络/CORS 跨域被拦截：浏览器无法直接访问该接口，请在「更多」接口地址前加 CORS 代理，或换用允许浏览器直连的兼容服务/本地模型";
     box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div><div style="margin-top:10px"><button class="btn sec2" onclick="closeRecogSheet()">关闭</button></div></div>';
   }
@@ -1923,7 +1923,7 @@ async function analyzeScale(file){
     {role:"system",content:sys},
     {role:"user",content:[{type:"text",text:"读取这张体重秤/体脂秤截图中的体重、体脂率、基础代谢等数据。"},{type:"image_url",image_url:{url:b64}}]}
   ],max_tokens:400,temperature:0.2};
-  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),60000);
+  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),120000);
   try{
     const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+api.key},body:JSON.stringify(body),signal:ctrl.signal});
     clearTimeout(timer);
@@ -1935,7 +1935,7 @@ async function analyzeScale(file){
     recordBodyFromObj(obj);
   }catch(e){
     clearTimeout(timer);let msg=e.message||"未知错误";
-    if(e.name==="AbortError")msg="请求超时(60s)：接口响应慢或图片上传慢。可尝试：①切到 Wi-Fi ②在「更多」换用响应更快的模型 ③在接口地址前加 CORS 代理";
+    if(e.name==="AbortError")msg="请求超时(120s)：接口响应太慢。建议：①在「更多」把模型改成 glm-4v-flash（比 glm-4v 快很多）②切到 Wi-Fi/好网络 ③拍小一点的图";
     else if(/Failed to fetch/i.test(msg))msg="网络/CORS 跨域被拦截：浏览器无法直接访问该接口，请在「更多」接口地址前加 CORS 代理，或换用允许浏览器直连的兼容服务/本地模型";
     box().innerHTML='<div class="card"><div class="empty">识别失败：'+esc(msg)+'</div><div style="margin-top:10px"><button class="btn sec2" onclick="document.getElementById(\'bodyRecogBox\').innerHTML=\'\'">关闭</button></div></div>';
   }
