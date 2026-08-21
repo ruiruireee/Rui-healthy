@@ -778,8 +778,12 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
       <div class="hint" style="margin-bottom:10px">把全部数据（吃/运动/体重/目标）导出成 JSON 保存，换手机或重装后可导入恢复。重部署前建议先导出。</div>
       <button class="btn sec2" style="margin-top:4px" onclick="exportData()">📤 下载备份 JSON</button>
       <button class="btn sec2" style="margin-top:8px" onclick="copyData()">📋 复制 JSON</button>
-      <div style="margin-top:12px"><label>导入 JSON 恢复</label>
-        <input id="importFile" type="file" accept="application/json,.json" style="padding:8px" onchange="importData(event)">
+      <div style="margin-top:12px"><label>导入 JSON 恢复（选文件）</label>
+        <input id="importFile" type="file" accept="application/json,.json" style="padding:8px;width:100%;box-sizing:border-box" onchange="importData(event)">
+      </div>
+      <div style="margin-top:12px"><label>或粘贴 JSON 文本导入</label>
+        <textarea id="importText" rows="4" placeholder="把备份 JSON 文本粘贴到这里（从「复制 JSON」或他人发来的修正 JSON）" style="width:100%;box-sizing:border-box;padding:8px;border-radius:10px;border:1px solid var(--card);background:var(--bg);color:var(--text);font-size:13px;resize:vertical"></textarea>
+        <button class="btn sec2" style="margin-top:8px" onclick="importFromText()">📥 粘贴导入</button>
       </div>
       <div class="hint" style="margin-top:8px;color:var(--danger)">⚠️ 导入会覆盖当前全部数据，请先导出备份。</div>
     </div>
@@ -2129,22 +2133,31 @@ async function copyData(){
     document.body.removeChild(ta);
   }
 }
+function _doImport(obj,label){
+  if(typeof obj!=="object"||obj===null||Array.isArray(obj)){toast("导入失败：不是有效的备份(JSON 应是对象)");return;}
+  if(!confirm("导入会覆盖当前全部数据，确定继续？（建议先点「下载备份 JSON」备份）")){return;}
+  Object.assign(S, obj);save();renderMore();
+  toast("已导入，正在刷新…");
+  setTimeout(()=>location.reload(),600);
+}
 function importData(ev){
   const file=ev.target&&ev.target.files&&ev.target.files[0];
   if(!file){toast("未选择文件");return;}
   const r=new FileReader();
   r.onload=()=>{
-    try{
-      const obj=JSON.parse(r.result);
-      if(typeof obj!=="object"||obj===null||Array.isArray(obj))throw new Error("不是有效的备份(JSON 应是对象)");
-      if(!confirm("导入会覆盖当前全部数据，确定继续？（建议先点「下载备份 JSON」备份）")){ev.target.value="";return;}
-      Object.assign(S, obj);save();renderMore();
-      toast("已导入，正在刷新…");
-      setTimeout(()=>location.reload(),600);
-    }catch(e){toast("导入失败："+e.message);ev.target.value="";}
+    try{ const obj=JSON.parse(r.result); _doImport(obj,"文件"); }
+    catch(e){ toast("导入失败："+e.message); }
+    ev.target.value="";
   };
   r.onerror=()=>{toast("读取文件失败");ev.target.value="";};
   r.readAsText(file);
+}
+function importFromText(){
+  const ta=document.getElementById("importText");
+  const v=(ta&&ta.value||"").trim();
+  if(!v){toast("请先粘贴 JSON 文本");return;}
+  try{ const obj=JSON.parse(v); _doImport(obj,"粘贴"); }
+  catch(e){ toast("粘贴失败：JSON 格式错误（"+e.message+"）"); }
 }
 function toggleKey(){
   const el=document.getElementById("aKey"),b=el.previousElementSibling;
