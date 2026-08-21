@@ -2053,17 +2053,26 @@ function _toNum(v){
   return null;
 }
 function _pick(obj,words,exclude){
-  const keys=Object.keys(obj);
-  for(const pass of [true,false]){
-    for(const k of keys){
-      const lk=k.toLowerCase();
-      if(words.some(w=>lk.includes(w.toLowerCase()))){
-        const bad=exclude&&exclude.some(e=>lk.includes(e.toLowerCase()));
-        if(pass?!bad:bad){const v=_toNum(obj[k]);if(v!=null)return v;}
+  let found=null;
+  const W=words.map(w=>w.toLowerCase()), EX=exclude?exclude.map(e=>e.toLowerCase()):[];
+  (function walk(o){
+    if(found!==null)return;
+    if(Array.isArray(o)){for(const it of o){walk(it);if(found!==null)return;}}
+    else if(o&&typeof o==="object"){
+      const keys=Object.keys(o);
+      for(const pass of [true,false]){
+        for(const k of keys){
+          const lk=String(k).toLowerCase();
+          if(W.some(w=>lk.includes(w))){
+            const bad=EX.length&&EX.some(e=>lk.includes(e));
+            if(pass?!bad:bad){const v=_toNum(o[k]);if(v!=null){found=v;return;}}
+          }
+          if(found===null&&o[k]&&typeof o[k]==="object"){walk(o[k]);if(found!==null)return;}
+        }
       }
     }
-  }
-  return null;
+  })(obj);
+  return found;
 }
 function recordBodyFromObj(obj){
   const w=parseFloat(obj.weight_kg);
