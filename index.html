@@ -774,6 +774,12 @@ html[data-theme="soft"] .cal-flower-badge b{color:#e11d48}
       <button class="btn" style="margin-top:12px" onclick="saveApi()">保存</button>
     </div>
     <div class="card">
+      <div style="background:var(--card);border-radius:16px;padding:14px;margin-bottom:14px">
+        <h2>版本 / 更新</h2>
+        <div class="hint">当前版本：2026-08-21（含「粘贴 JSON 导入」、肌肉率/水分识别修复）</div>
+        <button class="btn sec2" style="margin-top:8px" onclick="location.reload(true)">🔄 强制刷新页面（更新到最新版，不删数据）</button>
+        <div class="hint" style="margin-top:6px">若新功能 / 修复没出现，点此刷新即可；它只重新加载页面，不会删除你的任何记录。</div>
+      </div>
       <h2>数据备份</h2>
       <div class="hint" style="margin-bottom:10px">把全部数据（吃/运动/体重/目标）导出成 JSON 保存，换手机或重装后可导入恢复。重部署前建议先导出。</div>
       <button class="btn sec2" style="margin-top:4px" onclick="exportData()">📤 下载备份 JSON</button>
